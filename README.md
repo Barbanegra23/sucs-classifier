@@ -44,7 +44,7 @@ flutter run
 
 ## Tests
 
-El motor de clasificación cuenta con una suite de tests unitarios que cubre casos límite de la norma (zona CL-ML, umbrales de Cu/Cc para grava vs. arena, validaciones cruzadas, etc.):
+El motor de clasificación cuenta con una suite de tests unitarios que cubre casos límite de la norma (zona CL-ML, umbrales de Cu/Cc para grava vs. arena, validaciones cruzadas, etc.). También hay cobertura para la interpretación geotécnica (`soil_interpretation.dart`) y la persistencia del historial (`historial_service.dart`, incluyendo compatibilidad con formato legacy y el tope de 50 muestras):
 
 ```bash
 flutter test

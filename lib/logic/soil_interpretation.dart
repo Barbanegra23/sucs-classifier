@@ -68,10 +68,15 @@ class SoilInterpretation {
   static List<String> generarRecomendaciones(
       String simbolo, double pi, double ll,
       {double? d10}) {
-    final base = simbolo.split("-").first;
+    // Se switchea sobre `simbolo` completo (no sobre su `base` sin sufijo
+    // dual): "CL-ML".split("-").first == "CL", así que switchear por base
+    // hacía que los casos "CL-ML" y los 8 símbolos duales de grava/arena
+    // fueran inalcanzables — un suelo GW-GC recibía las recomendaciones
+    // de GW simple. Los casos de símbolo simple (ej. "GW", "SW") siguen
+    // funcionando igual porque, sin sufijo dual, simbolo == base.
     List<String> rec = [];
 
-    switch (base) {
+    switch (simbolo) {
       case "GW":
       case "SW":
         rec.add("Material apto para bases y sub-bases de pavimentos");
@@ -256,6 +261,77 @@ class SoilInterpretation {
   static List<String> interpretacionIngenieril(String simbolo) {
     final base = simbolo.split("-").first;
 
+    // 🔀 SÍMBOLOS DUALES (deben chequearse ANTES que los símbolos base:
+    // "GW-GC".split("-").first == "GW", así que si el chequeo por `base`
+    // fuera primero, todo símbolo dual caería en la interpretación del
+    // símbolo simple y esta rama quedaría muerta — ver commit que corrige esto).
+    if (simbolo == "GW-GC") {
+      return [
+        "Grava bien graduada con finos arcillosos",
+        "Alta estabilidad mecánica con cohesión adicional por arcilla",
+        "Permeabilidad media — los finos arcillosos reducen el drenaje libre",
+        "Posible variación volumétrica moderada ante cambios de humedad",
+      ];
+    }
+    if (simbolo == "GW-GM") {
+      return [
+        "Grava bien graduada con finos limosos",
+        "Buena estabilidad granular con sensibilidad hídrica por los limos",
+        "Permeabilidad media — menor que GW limpia",
+        "Susceptible a pérdida de resistencia si se satura",
+      ];
+    }
+    if (simbolo == "GP-GC") {
+      return [
+        "Grava mal graduada con finos arcillosos",
+        "Gradación deficiente con cohesión parcial por arcilla",
+        "Comportamiento poco predecible bajo carga",
+        "Baja permeabilidad — los finos obturan los vacíos",
+      ];
+    }
+    if (simbolo == "GP-GM") {
+      return [
+        "Grava mal graduada con finos limosos",
+        "Doble limitación: mala gradación y sensibilidad hídrica",
+        "Alta vulnerabilidad a saturación",
+        "Permeabilidad media a baja e irregular",
+      ];
+    }
+    if (simbolo == "SW-SC") {
+      return [
+        "Arena bien graduada con finos arcillosos (5–12% pasa N°200)",
+        "Buena distribución granulométrica con cohesión real aportada por la arcilla",
+        "Permeabilidad menor que SW limpia — los finos reducen el drenaje",
+        "Resistencia al corte incrementada por cohesión — favorable para bases",
+        "Monitorear PI de los finos: valores altos indican riesgo de expansión",
+      ];
+    }
+    if (simbolo == "SW-SM") {
+      return [
+        "Arena bien graduada con finos limosos (5–12% pasa N°200)",
+        "Buena gradación granulométrica con sensibilidad hídrica por los limos",
+        "Permeabilidad media — menor que SW limpia",
+        "Cohesión aparente (por capilaridad) — se pierde al saturarse",
+        "Evaluar potencial de licuefacción en zonas sísmicas",
+      ];
+    }
+    if (simbolo == "SP-SC") {
+      return [
+        "Arena mal graduada con finos arcillosos",
+        "Gradación deficiente — vacíos irregulares con cohesión parcial",
+        "La cohesión de los finos puede enmascarar inestabilidad de gradación",
+        "Baja permeabilidad — los finos arcillosos obturan los poros",
+      ];
+    }
+    if (simbolo == "SP-SM") {
+      return [
+        "Arena mal graduada con finos limosos",
+        "Combinación de mayor riesgo: mala gradación y limos sensibles al agua",
+        "Alta susceptibilidad a licuefacción en zonas sísmicas",
+        "Permeabilidad media a baja e irregular",
+      ];
+    }
+
     // 🪨 GRAVAS
     if (base == "GW") {
       return [
@@ -370,76 +446,6 @@ class SoilInterpretation {
         "Gran sensibilidad a cambios de humedad — ciclos de hinchamiento y retracción",
         "Alto potencial expansivo — requiere ensayo de hinchamiento libre",
         "Resistencia no drenada baja — no confiar en valores en seco",
-      ];
-    }
-
-    // 🔀 SÍMBOLOS DUALES GRAVAS
-    if (simbolo == "GW-GC") {
-      return [
-        "Grava bien graduada con finos arcillosos",
-        "Alta estabilidad mecánica con cohesión adicional por arcilla",
-        "Permeabilidad media — los finos arcillosos reducen el drenaje libre",
-        "Posible variación volumétrica moderada ante cambios de humedad",
-      ];
-    }
-    if (simbolo == "GW-GM") {
-      return [
-        "Grava bien graduada con finos limosos",
-        "Buena estabilidad granular con sensibilidad hídrica por los limos",
-        "Permeabilidad media — menor que GW limpia",
-        "Susceptible a pérdida de resistencia si se satura",
-      ];
-    }
-    if (simbolo == "GP-GC") {
-      return [
-        "Grava mal graduada con finos arcillosos",
-        "Gradación deficiente con cohesión parcial por arcilla",
-        "Comportamiento poco predecible bajo carga",
-        "Baja permeabilidad — los finos obturan los vacíos",
-      ];
-    }
-    if (simbolo == "GP-GM") {
-      return [
-        "Grava mal graduada con finos limosos",
-        "Doble limitación: mala gradación y sensibilidad hídrica",
-        "Alta vulnerabilidad a saturación",
-        "Permeabilidad media a baja e irregular",
-      ];
-    }
-
-    // 🔀 SÍMBOLOS DUALES ARENAS
-    if (simbolo == "SW-SC") {
-      return [
-        "Arena bien graduada con finos arcillosos (5–12% pasa N°200)",
-        "Buena distribución granulométrica con cohesión real aportada por la arcilla",
-        "Permeabilidad menor que SW limpia — los finos reducen el drenaje",
-        "Resistencia al corte incrementada por cohesión — favorable para bases",
-        "Monitorear PI de los finos: valores altos indican riesgo de expansión",
-      ];
-    }
-    if (simbolo == "SW-SM") {
-      return [
-        "Arena bien graduada con finos limosos (5–12% pasa N°200)",
-        "Buena gradación granulométrica con sensibilidad hídrica por los limos",
-        "Permeabilidad media — menor que SW limpia",
-        "Cohesión aparente (por capilaridad) — se pierde al saturarse",
-        "Evaluar potencial de licuefacción en zonas sísmicas",
-      ];
-    }
-    if (simbolo == "SP-SC") {
-      return [
-        "Arena mal graduada con finos arcillosos",
-        "Gradación deficiente — vacíos irregulares con cohesión parcial",
-        "La cohesión de los finos puede enmascarar inestabilidad de gradación",
-        "Baja permeabilidad — los finos arcillosos obturan los poros",
-      ];
-    }
-    if (simbolo == "SP-SM") {
-      return [
-        "Arena mal graduada con finos limosos",
-        "Combinación de mayor riesgo: mala gradación y limos sensibles al agua",
-        "Alta susceptibilidad a licuefacción en zonas sísmicas",
-        "Permeabilidad media a baja e irregular",
       ];
     }
 
