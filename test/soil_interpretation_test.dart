@@ -61,8 +61,11 @@ void main() {
     });
 
     test('símbolo dual bajo la Línea A menciona influencia limosa', () {
-      // LL=30 → Línea A = 7.3. PI=5 < 7.3 → limosa.
-      final r = SoilInterpretation.generarResumen('GW-GM', 5, 30);
+      // Base GW/SW/GP/SP con PI<7 se clasifica como "granular limpio" ANTES
+      // de mirar si es dual (ver esGranularLimpio en el código) — por eso
+      // acá uso PI=8, para evitar esa rama y sí llegar a comparar contra
+      // la Línea A. LL=35 → Línea A = 0.73*(35-20) = 10.95. PI=8 < 10.95 → limosa.
+      final r = SoilInterpretation.generarResumen('GW-GM', 8, 35);
       expect(r, contains('influencia limosa'));
     });
 
