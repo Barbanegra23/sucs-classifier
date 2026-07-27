@@ -1,0 +1,39 @@
+name: sucs_classifier
+description: "Clasificador de suelos según el Sistema Unificado de Clasificación de Suelos (SUCS)"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fl_chart: ^0.66.0
+  # sensors_plus eliminado — nunca se importa en el código
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.5
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  path_provider: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/welcome_bg.jpg
+    - assets/images/logo_sucs.png
+    # assets/fonts/Inter-Regular.ttf fue removido del pubspec porque
+    # ya se usa google_fonts para Inter. Si querés usar la fuente local
+    # descomentá esta sección y borrá google_fonts:
+    # fonts:
+    #   - family: Inter
+    #     fonts:
+    #       - asset: assets/fonts/Inter-Regular.ttf

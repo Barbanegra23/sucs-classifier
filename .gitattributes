@@ -1,0 +1,13 @@
+# Normaliza todos los finales de línea a LF en el repositorio,
+# sin importar si el archivo fue guardado en Windows (CRLF) o no.
+# Evita diffs ruidosos donde una línea aparece "modificada" solo
+# por el salto de línea.
+* text=auto eol=lf
+
+# Binarios: nunca tocar finales de línea
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.ttf binary
+*.otf binary
