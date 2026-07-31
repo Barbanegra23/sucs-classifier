@@ -127,12 +127,15 @@ class _ResultSectionState extends State<ResultSection> {
       PuntoGranulometrico(4.75, 100 - widget.retenidoN4),
     ];
     if (100 - widget.retenidoN4 < 100) pts.add(PuntoGranulometrico(50.0, 100));
-    if (widget.d10 != null && widget.d10! > 0)
+    if (widget.d10 != null && widget.d10! > 0) {
       pts.add(PuntoGranulometrico(widget.d10!, 10));
-    if (widget.d30 != null && widget.d30! > 0)
+    }
+    if (widget.d30 != null && widget.d30! > 0) {
       pts.add(PuntoGranulometrico(widget.d30!, 30));
-    if (widget.d60 != null && widget.d60! > 0)
+    }
+    if (widget.d60 != null && widget.d60! > 0) {
       pts.add(PuntoGranulometrico(widget.d60!, 60));
+    }
     return pts;
   }
 

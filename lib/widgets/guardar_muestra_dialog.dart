@@ -255,7 +255,6 @@ class _GuardarMuestraDialogState extends State<GuardarMuestraDialog> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final teal = colors.secondary;
-    final tealDark = colors.textPrimary;
     final tealLight = colors.textSecondary;
     final tealBorder = colors.secondary.withValues(alpha: 0.35);
     final orange = colors.primary;
@@ -714,8 +713,7 @@ class _OpcionP extends StatelessWidget {
                     )),
                 Text(sublabel,
                     style: TextStyle(
-                        fontSize: 11,
-                        color: tealLight.withValues(alpha: 0.8))),
+                        fontSize: 11, color: tealLight.withValues(alpha: 0.8))),
               ],
             ),
           ),

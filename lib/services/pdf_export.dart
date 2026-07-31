@@ -83,9 +83,7 @@ class PdfExport {
                 ),
                 pw.SizedBox(width: 14),
                 pw.Container(
-                    width: 1,
-                    height: 26,
-                    color: PdfColor(1, 1, 1, 0.35)),
+                    width: 1, height: 26, color: PdfColor(1, 1, 1, 0.35)),
                 pw.SizedBox(width: 14),
                 // Descripción + chips
                 pw.Expanded(
@@ -110,7 +108,8 @@ class PdfExport {
                                   decoration: pw.BoxDecoration(
                                     color: PdfColor(
                                       (headerColor.red + 0.25).clamp(0.0, 1.0),
-                                      (headerColor.green + 0.25).clamp(0.0, 1.0),
+                                      (headerColor.green + 0.25)
+                                          .clamp(0.0, 1.0),
                                       (headerColor.blue + 0.25).clamp(0.0, 1.0),
                                     ),
                                     borderRadius: const pw.BorderRadius.all(
@@ -133,8 +132,8 @@ class PdfExport {
                 pw.SizedBox(width: 14),
                 // Badge derecho: PI / Cu + norma + fecha
                 pw.Container(
-                  padding:
-                      const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
                   decoration: pw.BoxDecoration(
                     color: PdfColor(
                       (headerColor.red + 0.18).clamp(0.0, 1.0),
@@ -161,20 +160,14 @@ class PdfExport {
                                 color: white,
                                 font: pw.Font.helveticaBold())),
                         pw.Text(sobreA ? 'Arcilloso' : 'Limoso',
-                            style: pw.TextStyle(
-                                fontSize: 8,
-                                color: white)),
+                            style: pw.TextStyle(fontSize: 8, color: white)),
                         pw.SizedBox(height: 4),
                       ],
                       pw.Text('ASTM D2487',
-                          style: pw.TextStyle(
-                              fontSize: 7,
-                              color: white)),
+                          style: pw.TextStyle(fontSize: 7, color: white)),
                       pw.SizedBox(height: 2),
                       pw.Text(_formatFecha(now),
-                          style: pw.TextStyle(
-                              fontSize: 7,
-                              color: white)),
+                          style: pw.TextStyle(fontSize: 7, color: white)),
                     ],
                   ),
                 ),
@@ -186,31 +179,35 @@ class PdfExport {
           pw.Container(
             width: double.infinity,
             color: bgCard,
-            padding:
-                const pw.EdgeInsets.symmetric(horizontal: 28, vertical: 7),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 28, vertical: 7),
             child: pw.Wrap(
               spacing: 16,
               runSpacing: 4,
               children: [
-                _datoChip('P200', '${pasa200.toStringAsFixed(1)} %',
-                    textDark, textGrey),
-                _datoChip('R4', '${retenidoN4.toStringAsFixed(1)} %',
-                    textDark, textGrey),
+                _datoChip('P200', '${pasa200.toStringAsFixed(1)} %', textDark,
+                    textGrey),
+                _datoChip('R4', '${retenidoN4.toStringAsFixed(1)} %', textDark,
+                    textGrey),
                 if (pasa200 >= 5.0) ...[
                   _datoChip('LL', ll.toStringAsFixed(0), textDark, textGrey),
                   _datoChip('LP', lp.toStringAsFixed(0), textDark, textGrey),
-                  _datoChip('PI', pi.toStringAsFixed(1), headerColor, headerColor),
+                  _datoChip(
+                      'PI', pi.toStringAsFixed(1), headerColor, headerColor),
                 ],
                 if (cu != null)
-                  _datoChip('Cu', cu.toStringAsFixed(2), headerColor, headerColor),
+                  _datoChip(
+                      'Cu', cu.toStringAsFixed(2), headerColor, headerColor),
                 if (cc != null)
                   _datoChip('Cc', cc.toStringAsFixed(3), textDark, textGrey),
                 if (d10 != null)
-                  _datoChip('D10', '${d10.toStringAsFixed(3)} mm', textDark, textGrey),
+                  _datoChip('D10', '${d10.toStringAsFixed(3)} mm', textDark,
+                      textGrey),
                 if (d30 != null)
-                  _datoChip('D30', '${d30.toStringAsFixed(3)} mm', textDark, textGrey),
+                  _datoChip('D30', '${d30.toStringAsFixed(3)} mm', textDark,
+                      textGrey),
                 if (d60 != null)
-                  _datoChip('D60', '${d60.toStringAsFixed(3)} mm', textDark, textGrey),
+                  _datoChip('D60', '${d60.toStringAsFixed(3)} mm', textDark,
+                      textGrey),
               ],
             ),
           ),
@@ -318,8 +315,8 @@ class PdfExport {
                               if (!esGrueso) ...[
                                 pw.SizedBox(height: 14),
                                 pw.Container(
-                                  padding:
-                                      const pw.EdgeInsets.fromLTRB(10, 8, 10, 8),
+                                  padding: const pw.EdgeInsets.fromLTRB(
+                                      10, 8, 10, 8),
                                   decoration: pw.BoxDecoration(
                                     border: pw.Border(
                                         left: pw.BorderSide(
@@ -345,9 +342,11 @@ class PdfExport {
                                               textDark, textGrey),
                                           _datoChip('PI', pi.toStringAsFixed(1),
                                               textDark, textGrey),
-                                          _datoChip('A',
+                                          _datoChip(
+                                              'A',
                                               lineaAval.toStringAsFixed(2),
-                                              textDark, textGrey),
+                                              textDark,
+                                              textGrey),
                                         ],
                                       ),
                                       pw.SizedBox(height: 8),
@@ -398,14 +397,8 @@ class PdfExport {
                                   d30,
                                   d60,
                                   helvetica)
-                              : _colCasagrande(
-                                  resultado.symbol,
-                                  headerColor,
-                                  textDark,
-                                  textGrey,
-                                  ll,
-                                  pi,
-                                  helvetica),
+                              : _colCasagrande(resultado.symbol, headerColor,
+                                  textDark, textGrey, ll, pi, helvetica),
                         ),
                       ],
                     ),
@@ -424,114 +417,6 @@ class PdfExport {
     await Printing.layoutPdf(
       onLayout: (_) async => pdf.save(),
       name: '$nombreArchivo.pdf',
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────
-  // BLOQUE: DATOS INGRESADOS (portada)
-  // ──────────────────────────────────────────────────────────
-  static pw.Widget _buildDatosIngresados({
-    required PdfColor headerColor,
-    required PdfColor white,
-    required PdfColor textDark,
-    required double pasa200,
-    required double retenidoN4,
-    required double ll,
-    required double lp,
-    required double pi,
-    required double? cu,
-    required double? cc,
-    required double? d10,
-    required double? d30,
-    required double? d60,
-  }) {
-    final items = <_DatoItem>[
-      _DatoItem('% Pasa N200', '${pasa200.toStringAsFixed(1)} %'),
-      _DatoItem('% Ret. N4', '${retenidoN4.toStringAsFixed(1)} %'),
-      if (pasa200 >= 5.0) ...[
-        _DatoItem('Limite Liquido', ll.toStringAsFixed(1)),
-        _DatoItem('Limite Plastico', lp.toStringAsFixed(1)),
-        _DatoItem('Indice Plastico', pi.toStringAsFixed(1), destacado: true),
-      ],
-      if (cu != null) _DatoItem('Cu = D60/D10', cu.toStringAsFixed(2)),
-      if (cc != null) _DatoItem('Cc', cc.toStringAsFixed(3)),
-      if (d10 != null) _DatoItem('D10', '${d10.toStringAsFixed(3)} mm'),
-      if (d30 != null) _DatoItem('D30', '${d30.toStringAsFixed(3)} mm'),
-      if (d60 != null) _DatoItem('D60', '${d60.toStringAsFixed(3)} mm'),
-    ];
-
-    // Agrupar en filas de hasta 4 columnas
-    const cols = 4;
-    final rows = <List<_DatoItem>>[];
-    for (var i = 0; i < items.length; i += cols) {
-      rows.add(items.sublist(i, math.min(i + cols, items.length)));
-    }
-
-    return pw.Column(
-      children: rows.map((row) {
-        return pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 8),
-          child: pw.Row(
-            children: [
-              ...row.asMap().entries.map((e) {
-                final item = e.value;
-                return pw.Expanded(
-                  child: pw.Padding(
-                    padding: pw.EdgeInsets.only(
-                        right: e.key < row.length - 1 ? 8 : 0),
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 14),
-                      decoration: pw.BoxDecoration(
-                        color: item.destacado
-                            ? headerColor
-                            : PdfColor.fromInt(0xFFEEEEEE),
-                        borderRadius:
-                            const pw.BorderRadius.all(pw.Radius.circular(8)),
-                        border: item.destacado
-                            ? null
-                            : pw.Border.all(
-                                color: PdfColor.fromInt(0xFFDDDDDD),
-                                width: 0.5),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text(
-                            item.label,
-                            style: pw.TextStyle(
-                              fontSize: 8,
-                              color: item.destacado
-                                  ? PdfColor.fromInt(0xCCFFFFFF)
-                                  : PdfColor.fromInt(0xFF888888),
-                              fontWeight: pw.FontWeight.bold,
-                            ),
-                          ),
-                          pw.SizedBox(height: 4),
-                          pw.Text(
-                            item.value,
-                            style: pw.TextStyle(
-                              fontSize: 15,
-                              fontWeight: pw.FontWeight.bold,
-                              color: item.destacado
-                                  ? white
-                                  : PdfColor.fromInt(0xFF1A1A2E),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-              // Rellenar columnas vacías al final de la última fila
-              if (row.length < cols)
-                ...List.generate(cols - row.length,
-                    (_) => pw.Expanded(child: pw.SizedBox())),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -717,15 +602,19 @@ class PdfExport {
                   pw.SizedBox(height: 14),
                   _secTitle('ZONAS', headerColor),
                   pw.SizedBox(height: 5),
-                  _zonaRow('CL',    'Arcilla baja plas.', PdfColor.fromInt(0xFF5B8DB8)),
+                  _zonaRow(
+                      'CL', 'Arcilla baja plas.', PdfColor.fromInt(0xFF5B8DB8)),
                   pw.SizedBox(height: 3),
-                  _zonaRow('CH',    'Arcilla alta plas.', PdfColor.fromInt(0xFFB8A05B)),
+                  _zonaRow(
+                      'CH', 'Arcilla alta plas.', PdfColor.fromInt(0xFFB8A05B)),
                   pw.SizedBox(height: 3),
-                  _zonaRow('ML',    'Limo baja plas.',    PdfColor.fromInt(0xFF6BA368)),
+                  _zonaRow(
+                      'ML', 'Limo baja plas.', PdfColor.fromInt(0xFF6BA368)),
                   pw.SizedBox(height: 3),
-                  _zonaRow('MH',    'Limo alta plas.',    PdfColor.fromInt(0xFFB87A5B)),
+                  _zonaRow(
+                      'MH', 'Limo alta plas.', PdfColor.fromInt(0xFFB87A5B)),
                   pw.SizedBox(height: 3),
-                  _zonaRow('CL-ML', 'Transicion',         PdfColor.fromInt(0xFF8B5B8B)),
+                  _zonaRow('CL-ML', 'Transicion', PdfColor.fromInt(0xFF8B5B8B)),
                 ],
               ),
             ),
@@ -1117,11 +1006,12 @@ class PdfExport {
         ..setFillColor(color)
         ..drawString(font, 6, text, px(lx), py(lpi));
     }
-    zoneLabel('CL',    28, 20,  PdfColor.fromInt(0xFF5B8DB8));
-    zoneLabel('CH',    65, 42,  PdfColor.fromInt(0xFFB8A05B));
-    zoneLabel('ML',    28,  2,  PdfColor.fromInt(0xFF6BA368));
-    zoneLabel('MH',    65,  8,  PdfColor.fromInt(0xFFB87A5B));
-    zoneLabel('CL-ML', 20,  5,  PdfColor.fromInt(0xFF8B5B8B));
+
+    zoneLabel('CL', 28, 20, PdfColor.fromInt(0xFF5B8DB8));
+    zoneLabel('CH', 65, 42, PdfColor.fromInt(0xFFB8A05B));
+    zoneLabel('ML', 28, 2, PdfColor.fromInt(0xFF6BA368));
+    zoneLabel('MH', 65, 8, PdfColor.fromInt(0xFFB87A5B));
+    zoneLabel('CL-ML', 20, 5, PdfColor.fromInt(0xFF8B5B8B));
 
     canvas
       ..setStrokeColor(PdfColor.fromInt(0xFF555555))
@@ -1182,15 +1072,14 @@ class PdfExport {
               child: pw.Text(
                 simbolo,
                 style: pw.TextStyle(
-                    fontSize: 4.5,
-                    color: color,
-                    font: pw.Font.helveticaBold()),
+                    fontSize: 4.5, color: color, font: pw.Font.helveticaBold()),
               ),
             ),
           ),
           pw.SizedBox(width: 4),
           pw.Text(nombre,
-              style: pw.TextStyle(fontSize: 7, color: PdfColor.fromInt(0xFF555555))),
+              style: pw.TextStyle(
+                  fontSize: 7, color: PdfColor.fromInt(0xFF555555))),
         ],
       );
 
@@ -1318,13 +1207,6 @@ class PdfExport {
 // ─────────────────────────────────────────────────────────────
 // DATA CLASSES AUXILIARES
 // ─────────────────────────────────────────────────────────────
-
-class _DatoItem {
-  final String label;
-  final String value;
-  final bool destacado;
-  const _DatoItem(this.label, this.value, {this.destacado = false});
-}
 
 class _MuestraCampo {
   final String label;
