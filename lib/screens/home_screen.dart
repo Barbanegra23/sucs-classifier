@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/sucs_classifier.dart';
 import '../theme/app_colors.dart';
-import '../widgets/header_widgets.dart';
-import '../widgets/input_card.dart';
-import '../widgets/input_field.dart';
 import '../widgets/result_section.dart';
 import '../widgets/guardar_muestra_dialog.dart';
 import '../widgets/historial_panel.dart';
+import '../widgets/home/home_header.dart';
+import '../widgets/home/tamices_card.dart';
+import '../widgets/home/atterberg_card.dart';
+import '../widgets/home/granulometria_card.dart';
 import '../services/historial_service.dart';
-import 'onboarding_screen.dart';
-import '../main.dart' show toggleTheme;
 
 // =============================================================
 // CONSTANTES
@@ -115,15 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    for (final c in [
-      _pasa200,
-      _retenidoN4,
-      _ll,
-      _lp,
-      _d10,
-      _d30,
-      _d60
-    ]) {
+    for (final c in [_pasa200, _retenidoN4, _ll, _lp, _d10, _d30, _d60]) {
       c.dispose();
     }
     for (final f in [
@@ -351,15 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
     HapticFeedback.heavyImpact();
 
     setState(() {
-      for (final c in [
-        _pasa200,
-        _retenidoN4,
-        _ll,
-        _lp,
-        _d10,
-        _d30,
-        _d60
-      ]) {
+      for (final c in [_pasa200, _retenidoN4, _ll, _lp, _d10, _d30, _d60]) {
         c.clear();
       }
       resultado = null;
@@ -495,7 +478,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(children: [
         // ── Contenido principal ───────────────────────────
         Column(children: [
-          _buildHeader(context),
+          const HomeHeader(),
           Expanded(
             child: Form(
               key: _formKey,
@@ -507,284 +490,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(children: [
                   // ── TAMICES ───────────────────────────────
-                  InputCard(
-                    titulo: 'Tamices',
-                    subtitulo: '% pasa N°200  ·  % retenido N°4',
-                    children: [
-                      InputField(
-                        controller: _pasa200,
-                        label: '% Pasa N°200',
-                        hintText: '0 – 100',
-                        tooltip:
-                            'Porcentaje del suelo que pasa el tamiz N°200 (0,075mm). Determina si el suelo es grueso (< 50%) o fino (≥ 50%).',
-                        autoValidate: _autoValidate,
-                        focusNode: _fnPasa200,
-                        nextFocusNode: _fnRetenidoN4,
-                        extraValidator: (v) {
-                          if (v > 100) return '% pasa 200 no puede superar 100';
-                          return null;
-                        },
-                      ),
-                      InputField(
-                        controller: _retenidoN4,
-                        label: '% Retenido N°4',
-                        hintText: '0 – 100',
-                        tooltip:
-                            'Porcentaje del suelo que queda retenido en el tamiz N°4 (4,75mm). Permite distinguir entre grava y arena dentro de los suelos gruesos.',
-                        autoValidate: _autoValidate,
-                        focusNode: _fnRetenidoN4,
-                        nextFocusNode: _fnLL,
-                        extraValidator: (r4) {
-                          if (r4 > 100) {
-                            return '% retenido N°4 no puede superar 100';
-                          }
-                          final p200 = double.tryParse(_pasa200.text);
-                          if (p200 != null && r4 + p200 > 100) {
-                            return 'R4 + P200 = ${(r4 + p200).toStringAsFixed(1)}% > 100%';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+                  TamicesCard(
+                    pasa200: _pasa200,
+                    retenidoN4: _retenidoN4,
+                    fnPasa200: _fnPasa200,
+                    fnRetenidoN4: _fnRetenidoN4,
+                    fnNext: _fnLL,
+                    autoValidate: _autoValidate,
                   ),
 
                   // ── LÍMITES DE ATTERBERG ──────────────────
-                  // Mismo patrón que Curva granulométrica:
-                  // sin P200 → mensaje de espera
-                  // P200 < 5% → no aplican
-                  // P200 ≥ 5% → campos visibles
-                  InputCard(
-                    titulo: 'Límites de Atterberg',
-                    subtitulo: p200val == null
-                        ? 'Completá % pasa N°200 primero'
-                        : p200val < 5
-                            ? 'No aplican (finos < 5%)'
-                            : 'LL y LP — requeridos cuando finos ≥ 5%',
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, anim) => FadeTransition(
-                          opacity: anim,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.08),
-                              end: Offset.zero,
-                            ).animate(anim),
-                            child: child,
-                          ),
-                        ),
-                        child: p200val == null
-                            ? const _InfoText(
-                                'Ingresá % pasa 200 para continuar',
-                                key: ValueKey('atterberg_pending'),
-                              )
-                            : p200val < 5
-                                ? const _InfoText(
-                                    'Con menos del 5% de finos los\n'
-                                    'límites de Atterberg no aplican',
-                                    key: ValueKey('atterberg_no_aplica'),
-                                  )
-                                : Column(
-                                    key: const ValueKey('atterberg_campos'),
-                                    children: [
-                                      InputField(
-                                        controller: _ll,
-                                        label: 'LL — Límite Líquido',
-                                        hintText: 'Ej: 45',
-                                        tooltip:
-                                            'Límite Líquido: contenido de humedad (%) con el que el suelo pasa de estado plástico a líquido.',
-                                        autoValidate: _autoValidate,
-                                        focusNode: _fnLL,
-                                        nextFocusNode: _fnLP,
-                                      ),
-                                      InputField(
-                                        controller: _lp,
-                                        label: 'LP — Límite Plástico',
-                                        hintText: 'Ej: 20',
-                                        tooltip:
-                                            'Límite Plástico: contenido de humedad (%) con el que el suelo pasa de estado semisólido a plástico.',
-                                        autoValidate: _autoValidate,
-                                        extraValidator: (lp) {
-                                          final ll = double.tryParse(_ll.text);
-                                          if (ll != null && lp > ll) {
-                                            return 'LP no puede ser mayor que LL';
-                                          }
-                                          return null;
-                                        },
-                                        focusNode: _fnLP,
-                                        nextFocusNode:
-                                            _esSueloGrueso ? _fnD10 : null,
-                                        onSubmit: _esSueloGrueso
-                                            ? null
-                                            : _clasificarConValidacion,
-                                      ),
-                                    ],
-                                  ),
-                      ),
-                    ],
+                  AtterbergCard(
+                    p200val: p200val,
+                    ll: _ll,
+                    lp: _lp,
+                    fnLL: _fnLL,
+                    fnLP: _fnLP,
+                    fnSiguiente: _esSueloGrueso ? _fnD10 : null,
+                    onSubmitFinal:
+                        _esSueloGrueso ? null : _clasificarConValidacion,
+                    autoValidate: _autoValidate,
                   ),
 
                   // ── CURVA GRANULOMÉTRICA (D10/D30/D60) ────
-                  InputCard(
-                    titulo: 'Curva granulométrica',
-                    subtitulo: 'D10 / D30 / D60 — solo suelos gruesos',
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, anim) => FadeTransition(
-                          opacity: anim,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.08),
-                              end: Offset.zero,
-                            ).animate(anim),
-                            child: child,
-                          ),
-                        ),
-                        child: p200val == null
-                            ? const _InfoText(
-                                'Ingresá % pasa 200 para continuar',
-                                key: ValueKey('pending'),
-                              )
-                            : p200val < _kLimiteSueloFino
-                                ? Column(
-                                    key: const ValueKey('grueso'),
-                                    children: [
-                                      InputField(
-                                        controller: _d10,
-                                        label: 'D10 (mm)',
-                                        hintText: 'Ej: 0.15',
-                                        tooltip:
-                                            'Diámetro al 10% pasante. Es el diámetro más pequeño de la curva granulométrica.',
-                                        focusNode: _fnD10,
-                                        nextFocusNode: _fnD30,
-                                        autoValidate: _autoValidate,
-                                        extraValidator: (d10) {
-                                          final d30 =
-                                              double.tryParse(_d30.text);
-                                          final d60 =
-                                              double.tryParse(_d60.text);
-                                          if (d30 != null && d10 >= d30) {
-                                            return 'D10 debe ser menor que D30 (${d30.toStringAsFixed(3)} mm)';
-                                          }
-                                          if (d60 != null && d10 >= d60) {
-                                            return 'D10 debe ser menor que D60 (${d60.toStringAsFixed(3)} mm)';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      InputField(
-                                        controller: _d30,
-                                        label: 'D30 (mm)',
-                                        hintText: 'Ej: 0.50',
-                                        tooltip:
-                                            'Diámetro al 30% pasante. Debe estar entre D10 y D60.',
-                                        focusNode: _fnD30,
-                                        nextFocusNode: _fnD60,
-                                        autoValidate: _autoValidate,
-                                        extraValidator: (d30) {
-                                          final d10 =
-                                              double.tryParse(_d10.text);
-                                          final d60 =
-                                              double.tryParse(_d60.text);
-                                          if (d10 != null && d30 <= d10) {
-                                            return 'D30 debe ser mayor que D10 (${d10.toStringAsFixed(3)} mm)';
-                                          }
-                                          if (d60 != null && d30 >= d60) {
-                                            return 'D30 debe ser menor que D60 (${d60.toStringAsFixed(3)} mm)';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      InputField(
-                                        controller: _d60,
-                                        label: 'D60 (mm)',
-                                        hintText: 'Ej: 2.0',
-                                        tooltip:
-                                            'Diámetro al 60% pasante. Es el diámetro más grande de los tres.',
-                                        focusNode: _fnD60,
-                                        onSubmit: _clasificarConValidacion,
-                                        autoValidate: _autoValidate,
-                                        extraValidator: (d60) {
-                                          final d10 =
-                                              double.tryParse(_d10.text);
-                                          final d30 =
-                                              double.tryParse(_d30.text);
-                                          if (d30 != null && d60 <= d30) {
-                                            return 'D60 debe ser mayor que D30 (${d30.toStringAsFixed(3)} mm)';
-                                          }
-                                          if (d10 != null && d60 <= d10) {
-                                            return 'D60 debe ser mayor que D10 (${d10.toStringAsFixed(3)} mm)';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      // Preview de Cu y Cc calculados
-                                      Builder(builder: (context) {
-                                        final d10v = _parse(_d10.text);
-                                        final d30v = _parse(_d30.text);
-                                        final d60v = _parse(_d60.text);
-                                        if (d10v == null ||
-                                            d30v == null ||
-                                            d60v == null ||
-                                            d10v <= 0 ||
-                                            d60v <= 0) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        final (cuPreview, ccPreview) =
-                                            calcularCuCc(
-                                                d10: d10v,
-                                                d30: d30v,
-                                                d60: d60v);
-                                        if (cuPreview == null ||
-                                            ccPreview == null) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        return Container(
-                                          margin:
-                                              const EdgeInsets.only(top: 12),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 10),
-                                          decoration: BoxDecoration(
-                                            color: context.appColors.primary
-                                                .withValues(alpha: 0.08),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: context.appColors.primary
-                                                  .withValues(alpha: 0.25),
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              _CuCcChip(
-                                                  label: 'Cu',
-                                                  value: cuPreview
-                                                      .toStringAsFixed(2)),
-                                              const SizedBox(width: 8),
-                                              _CuCcChip(
-                                                  label: 'Cc',
-                                                  value: ccPreview
-                                                      .toStringAsFixed(3)),
-                                            ],
-                                          ),
-                                        );
-                                      }),
-                                    ],
-                                  )
-                                : const _InfoText(
-                                    'Suelo fino → Cu y Cc no aplican',
-                                    key: ValueKey('fino'),
-                                  ),
-                      ),
-                    ],
+                  GranulometriaCard(
+                    p200val: p200val,
+                    limiteSueloFino: _kLimiteSueloFino,
+                    d10: _d10,
+                    d30: _d30,
+                    d60: _d60,
+                    fnD10: _fnD10,
+                    fnD30: _fnD30,
+                    fnD60: _fnD60,
+                    autoValidate: _autoValidate,
+                    onSubmitFinal: _clasificarConValidacion,
                   ),
 
                   const SizedBox(height: 10),
@@ -891,127 +630,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Builders ──────────────────────────────────────────────
 
-  Widget _buildHeader(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-    return Column(children: [
-      Container(
-        height: 4,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [
-            context.appColors.primary,
-            context.appColors.primaryLight,
-            context.appColors.headerAccentFade,
-          ]),
-        ),
-      ),
-      Container(
-        width: double.infinity,
-        padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 14),
-        color: context.appColors.headerBg,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.asset(
-                'assets/images/logo_sucs.png',
-                width: 38,
-                height: 38,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-                child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('CLASIFICADOR SUCS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      letterSpacing: 1.2,
-                    )),
-                SizedBox(height: 2),
-                Text('Sistema Unificado de Clasificación · ASTM D2487',
-                    style: TextStyle(
-                        color: context.appColors.headerSubtitle,
-                        fontSize: 10.5)),
-              ],
-            )),
-            const SizedBox(width: 8),
-            // Botón tema claro/oscuro
-            Tooltip(
-              message: context.isDark ? 'Modo claro' : 'Modo oscuro',
-              child: InkWell(
-                onTap: toggleTheme,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white10,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: Icon(
-                    context.isDark
-                        ? Icons.light_mode_rounded
-                        : Icons.dark_mode_rounded,
-                    color: Colors.white70,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Botón de ayuda
-            Tooltip(
-              message: 'Ver tutorial',
-              child: InkWell(
-                onTap: () => Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const OnboardingScreen(),
-                    transitionsBuilder: (_, anim, __, child) =>
-                        FadeTransition(opacity: anim, child: child),
-                    transitionDuration: const Duration(milliseconds: 280),
-                  ),
-                ),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white10,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: const Icon(Icons.help_outline_rounded,
-                      color: Colors.white70, size: 18),
-                ),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 14),
-          Container(height: 1, color: Colors.white10),
-          const SizedBox(height: 12),
-          const IntrinsicHeight(
-            child: Row(children: [
-              Expanded(
-                  child:
-                      HeaderStat(valor: 'ASTM D2487', etiqueta: 'Norma base')),
-              HeaderDivider(),
-              Expanded(
-                  child: HeaderStat(
-                      valor: '16 símbolos', etiqueta: 'GW · GP · CL · CH…')),
-              HeaderDivider(),
-              Expanded(
-                  child: HeaderStat(
-                      valor: 'Casagrande', etiqueta: 'Carta incluida')),
-            ]),
-          ),
-        ]),
-      ),
-    ]);
-  }
-
   Widget _buildBotones(BuildContext context) {
     final camposBase = _pasa200.text.isNotEmpty && _retenidoN4.text.isNotEmpty;
     final atterbergOk =
@@ -1080,17 +698,6 @@ const double _kHeaderHeight = 120.0;
 // WIDGETS AUXILIARES
 // =============================================================
 
-class _InfoText extends StatelessWidget {
-  final String texto;
-  const _InfoText(this.texto, {super.key});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Text(texto, style: const TextStyle(color: Colors.grey)),
-      );
-}
-
 class _ChipFlotante extends StatelessWidget {
   final SucsResult resultado;
   final bool porDebajo;
@@ -1147,39 +754,6 @@ class _ChipFlotante extends StatelessWidget {
             ),
           ]),
         ),
-      ),
-    );
-  }
-}
-
-class _CuCcChip extends StatelessWidget {
-  final String label;
-  final String value;
-  const _CuCcChip({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return RichText(
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: '$label = ',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: context.appColors.primary,
-              letterSpacing: 0.3,
-            ),
-          ),
-          TextSpan(
-            text: value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-        ],
       ),
     );
   }

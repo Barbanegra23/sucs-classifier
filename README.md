@@ -53,3 +53,7 @@ flutter test
 ## Alcance y limitaciones
 
 Esta herramienta está pensada como apoyo rápido de campo/oficina y no reemplaza el ensayo de laboratorio completo ni el juicio profesional del ingeniero geotécnico. No clasifica suelos orgánicos (OL, OH, Pt), ya que esto requiere comparar el límite líquido seco al horno vs. sin secar, dato no disponible en una clasificación de campo. La curva granulométrica que se grafica es una aproximación construida a partir de los parámetros índice (P200, R4, D10/D30/D60), no la curva completa de un ensayo de tamices.
+
+## Licencia
+
+Todos los derechos reservados. Ver [LICENSE](LICENSE). El código es de acceso público a modo de portfolio profesional; cualquier otro uso requiere autorización.

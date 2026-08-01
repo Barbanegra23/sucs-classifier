@@ -18,7 +18,8 @@ Future<void> _cargarTema() async {
   final saved = prefs.getString(_kThemeKey);
   if (saved == 'dark') appThemeMode.value = ThemeMode.dark;
   if (saved == 'light') appThemeMode.value = ThemeMode.light;
-  // 'system' o null → no cambia (valor inicial es system)
+  // 'system' o null → no cambia (valor inicial es ThemeMode.light,
+  // definido arriba a propósito, no ThemeMode.system).
 }
 
 Future<void> toggleTheme() async {
