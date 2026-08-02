@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../main.dart' show toggleTheme;
 import '../../screens/onboarding_screen.dart';
+import '../../screens/aashto_screen.dart';
 import '../header_widgets.dart';
 
 /// Encabezado de HomeScreen: logo, título, botón de tema claro/oscuro
@@ -62,6 +63,32 @@ class HomeHeader extends StatelessWidget {
                         fontSize: 10.5)),
               ],
             )),
+            const SizedBox(width: 8),
+            // Botón para ir a la clasificación AASHTO
+            Tooltip(
+              message: 'Clasificar por AASHTO',
+              child: InkWell(
+                onTap: () => Navigator.of(context).push(
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const AashtoScreen(),
+                    transitionsBuilder: (_, anim, __, child) =>
+                        FadeTransition(opacity: anim, child: child),
+                    transitionDuration: const Duration(milliseconds: 280),
+                  ),
+                ),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Icon(Icons.swap_horiz_rounded,
+                      color: Colors.white70, size: 18),
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
             // Botón tema claro/oscuro
             Tooltip(
