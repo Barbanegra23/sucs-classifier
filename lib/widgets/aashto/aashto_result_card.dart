@@ -5,9 +5,10 @@ import '../../theme/app_colors.dart';
 /// Muestra el resultado de la clasificación AASHTO: símbolo con GI,
 /// descripción, tipo de material, PI y calificación como subrasante.
 ///
-/// Nota de alcance: a diferencia del resultado de SUCS, esta primera
-/// versión no incluye gráfico de curva granulométrica ni exportación
-/// a PDF — se agregan más adelante si hace falta.
+/// Nota de alcance: a diferencia del resultado de SUCS, esta tarjeta
+/// no incluye gráfico de curva granulométrica (no aplica a AASHTO de
+/// la misma forma). El botón de exportar a PDF vive en AashtoScreen,
+/// junto a los datos crudos del formulario que necesita el PDF.
 class AashtoResultCard extends StatelessWidget {
   final AashtoResult resultado;
 

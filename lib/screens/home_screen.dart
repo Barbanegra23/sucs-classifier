@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/sucs_classifier.dart';
 import '../theme/app_colors.dart';
-import '../widgets/result_section.dart';
-import '../widgets/guardar_muestra_dialog.dart';
-import '../widgets/historial_panel.dart';
+import '../widgets/sucs_result_section.dart';
+import '../widgets/sucs_guardar_muestra_dialog.dart';
+import '../widgets/sucs_historial_panel.dart';
 import '../widgets/home/home_header.dart';
 import '../widgets/home/tamices_card.dart';
 import '../widgets/home/atterberg_card.dart';
 import '../widgets/home/granulometria_card.dart';
-import '../services/historial_service.dart';
+import '../services/sucs_historial_service.dart';
 
 // =============================================================
 // CONSTANTES
@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double? _parse(String v) => double.tryParse(v);
 
   Future<void> _cargarHistorial() async {
-    final guardado = await HistorialService.cargar();
+    final guardado = await SucsHistorialService.cargar();
     if (mounted) setState(() => _historial.addAll(guardado));
   }
 
@@ -114,7 +114,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    for (final c in [_pasa200, _retenidoN4, _ll, _lp, _d10, _d30, _d60]) {
+    for (final c in [
+      _pasa200,
+      _retenidoN4,
+      _ll,
+      _lp,
+      _d10,
+      _d30,
+      _d60
+    ]) {
       c.dispose();
     }
     for (final f in [
@@ -238,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _guardarMuestra() async {
     if (resultado == null) return;
 
-    final datos = await GuardarMuestraDialog.mostrar(
+    final datos = await SucsGuardarMuestraDialog.mostrar(
       context,
       simbolo: resultado!.symbol,
       descripcion: resultado!.description,
@@ -276,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
       nombre: datos.nombre,
     );
 
-    final actualizado = await HistorialService.agregar(_historial, entrada);
+    final actualizado = await SucsHistorialService.agregar(_historial, entrada);
     if (!mounted) return;
 
     HapticFeedback.lightImpact();
@@ -342,7 +350,15 @@ class _HomeScreenState extends State<HomeScreen> {
     HapticFeedback.heavyImpact();
 
     setState(() {
-      for (final c in [_pasa200, _retenidoN4, _ll, _lp, _d10, _d30, _d60]) {
+      for (final c in [
+        _pasa200,
+        _retenidoN4,
+        _ll,
+        _lp,
+        _d10,
+        _d30,
+        _d60
+      ]) {
         c.clear();
       }
       resultado = null;
@@ -409,7 +425,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (nuevo != null && nuevo.isNotEmpty) {
       final idx = _historial.indexOf(entrada);
       if (idx >= 0) {
-        await HistorialService.actualizarNombre(_historial, idx, nuevo);
+        await SucsHistorialService.actualizarNombre(_historial, idx, nuevo);
       }
       if (mounted) setState(() => entrada.nombre = nuevo);
     }
@@ -533,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Visible cuando hay al menos 1 muestra guardada.
                   if (historialVisible.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    HistorialPanel(
+                    SucsHistorialPanel(
                       historial: historialVisible,
                       onTap: (e) => setState(() => resultado = e.resultado),
                       onEditarNombre: _editarNombreMuestra,
@@ -541,7 +557,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         final idx = _historial.indexOf(e);
                         if (idx < 0) return;
                         final actualizado =
-                            await HistorialService.eliminar(_historial, idx);
+                            await SucsHistorialService.eliminar(_historial, idx);
                         if (mounted) {
                           setState(() => _historial
                             ..clear()
@@ -569,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             key: _resultadoKey,
                             children: [
                               const SizedBox(height: 20),
-                              ResultSection(
+                              SucsResultSection(
                                 resultado: resultado!,
                                 ll: llVal,
                                 pasa200: p200val ?? 0,

@@ -2,11 +2,11 @@ import 'package:fl_chart/fl_chart.dart' as fl;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/sucs_classifier.dart';
-import '../widgets/casagrande_chart.dart';
-import '../widgets/granulometria_chart.dart';
+import '../widgets/sucs_casagrande_chart.dart';
+import '../widgets/sucs_granulometria_chart.dart';
 import '../widgets/typewriter_text.dart';
-import '../logic/soil_interpretation.dart';
-import '../services/pdf_export.dart';
+import '../logic/sucs_interpretation.dart';
+import '../services/sucs_pdf_export.dart';
 import '../theme/app_colors.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ const _colorArena = Color(0xFFF0A500);
 // =============================================================
 // RESULT SECTION
 // =============================================================
-class ResultSection extends StatefulWidget {
+class SucsResultSection extends StatefulWidget {
   final SucsResult resultado;
   final double ll;
   final double pasa200;
@@ -33,7 +33,7 @@ class ResultSection extends StatefulWidget {
   final VoidCallback? onGuardar;
   final VoidCallback? onIrArriba;
 
-  const ResultSection({
+  const SucsResultSection({
     super.key,
     required this.resultado,
     required this.ll,
@@ -50,10 +50,10 @@ class ResultSection extends StatefulWidget {
   });
 
   @override
-  State<ResultSection> createState() => _ResultSectionState();
+  State<SucsResultSection> createState() => _SucsResultSectionState();
 }
 
-class _ResultSectionState extends State<ResultSection> {
+class _SucsResultSectionState extends State<SucsResultSection> {
   final _expandido = <String, bool>{
     'composicion': true,
     'resumen': true,
@@ -155,10 +155,10 @@ class _ResultSectionState extends State<ResultSection> {
     final chips = _chips(res.symbol, res.pi);
 
     final resumen =
-        SoilInterpretation.generarResumen(res.symbol, res.pi, widget.ll);
+        SucsInterpretation.generarResumen(res.symbol, res.pi, widget.ll);
     final interpretacion =
-        SoilInterpretation.interpretacionIngenieril(res.symbol);
-    final recomendaciones = SoilInterpretation.generarRecomendaciones(
+        SucsInterpretation.interpretacionIngenieril(res.symbol);
+    final recomendaciones = SucsInterpretation.generarRecomendaciones(
         res.symbol, res.pi, widget.ll,
         d10: widget.d10);
 
@@ -295,12 +295,12 @@ class _ResultSectionState extends State<ResultSection> {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: esFino
-                          ? CasagrandeChart(
+                          ? SucsCasagrandeChart(
                               ll: widget.ll,
                               pi: res.pi,
                               suelo: res.symbol,
                             )
-                          : GranulometriaChart(
+                          : SucsGranulometriaChart(
                               colorSuelo: color,
                               d10: widget.d10,
                               d30: widget.d30,
@@ -912,7 +912,7 @@ class _ExportPdfButtonState extends State<_ExportPdfButton> {
     setState(() => _exportando = true);
     HapticFeedback.lightImpact();
     try {
-      await PdfExport.exportar(
+      await SucsPdfExport.exportar(
         context: context,
         resultado: widget.resultado,
         pasa200: widget.pasa200,

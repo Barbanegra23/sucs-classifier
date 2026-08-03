@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
-import 'historial_service.dart';
+import 'sucs_historial_service.dart';
 
 // =============================================================
 // CSV EXPORT SERVICE
@@ -21,8 +21,8 @@ import 'historial_service.dart';
 //           LL, LP, %Pasa200, %RetN4, Cu, Cc
 // =============================================================
 
-class CsvExport {
-  CsvExport._();
+class SucsCsvExport {
+  SucsCsvExport._();
 
   static const _headers = [
     'N°',

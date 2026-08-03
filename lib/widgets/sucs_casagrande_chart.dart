@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 // de proyección usa exactamente los mismos reserved-sizes que fl_chart,
 // eliminando el desfase entre sombreado y líneas.
 
-class CasagrandeChart extends StatelessWidget {
+class SucsCasagrandeChart extends StatelessWidget {
   final double ll;
   final double pi;
   final String suelo;
 
-  const CasagrandeChart({
+  const SucsCasagrandeChart({
     super.key,
     required this.ll,
     required this.pi,

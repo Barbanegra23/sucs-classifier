@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sucs_classifier/services/historial_service.dart';
+import 'package:sucs_classifier/services/sucs_historial_service.dart';
 import 'package:sucs_classifier/theme/app_colors.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -86,11 +86,11 @@ class _ProyectosLocal {
 // ─────────────────────────────────────────────────────────────
 // DIÁLOGO
 // ─────────────────────────────────────────────────────────────
-class GuardarMuestraDialog extends StatefulWidget {
+class SucsGuardarMuestraDialog extends StatefulWidget {
   final String simbolo;
   final String descripcion;
 
-  const GuardarMuestraDialog({
+  const SucsGuardarMuestraDialog({
     super.key,
     required this.simbolo,
     required this.descripcion,
@@ -104,7 +104,7 @@ class GuardarMuestraDialog extends StatefulWidget {
     return showDialog<DatosMuestra>(
       context: context,
       barrierDismissible: true,
-      builder: (_) => GuardarMuestraDialog(
+      builder: (_) => SucsGuardarMuestraDialog(
         simbolo: simbolo,
         descripcion: descripcion,
       ),
@@ -112,10 +112,10 @@ class GuardarMuestraDialog extends StatefulWidget {
   }
 
   @override
-  State<GuardarMuestraDialog> createState() => _GuardarMuestraDialogState();
+  State<SucsGuardarMuestraDialog> createState() => _SucsGuardarMuestraDialogState();
 }
 
-class _GuardarMuestraDialogState extends State<GuardarMuestraDialog> {
+class _SucsGuardarMuestraDialogState extends State<SucsGuardarMuestraDialog> {
   // ── Formulario ────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _nombre = TextEditingController();
@@ -713,7 +713,8 @@ class _OpcionP extends StatelessWidget {
                     )),
                 Text(sublabel,
                     style: TextStyle(
-                        fontSize: 11, color: tealLight.withValues(alpha: 0.8))),
+                        fontSize: 11,
+                        color: tealLight.withValues(alpha: 0.8))),
               ],
             ),
           ),

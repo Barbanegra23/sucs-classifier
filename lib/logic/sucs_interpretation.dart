@@ -1,4 +1,4 @@
-class SoilInterpretation {
+class SucsInterpretation {
   // 🧠 RESUMEN INTELIGENTE
   static String generarResumen(String simbolo, double pi, double ll) {
     final base = simbolo.split("-").first;

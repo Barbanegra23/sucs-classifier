@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/csv_export.dart';
-import '../services/historial_service.dart';
+import '../services/sucs_csv_export.dart';
+import '../services/sucs_historial_service.dart';
 import '../services/sucs_classifier.dart';
 import '../theme/app_colors.dart';
 import 'confirm_dialog.dart';
@@ -15,13 +15,13 @@ import 'confirm_dialog.dart';
 // descarga el historial completo como CSV.
 // =============================================================
 
-class HistorialPanel extends StatefulWidget {
+class SucsHistorialPanel extends StatefulWidget {
   final List<EntradaHistorial> historial;
   final void Function(EntradaHistorial) onTap;
   final void Function(EntradaHistorial) onEditarNombre;
   final void Function(EntradaHistorial) onEliminar;
 
-  const HistorialPanel({
+  const SucsHistorialPanel({
     super.key,
     required this.historial,
     required this.onTap,
@@ -30,10 +30,10 @@ class HistorialPanel extends StatefulWidget {
   });
 
   @override
-  State<HistorialPanel> createState() => _HistorialPanelState();
+  State<SucsHistorialPanel> createState() => _SucsHistorialPanelState();
 }
 
-class _HistorialPanelState extends State<HistorialPanel> {
+class _SucsHistorialPanelState extends State<SucsHistorialPanel> {
   bool _expandido = false;
 
   @override
@@ -47,7 +47,7 @@ class _HistorialPanelState extends State<HistorialPanel> {
           onToggle: () => setState(() => _expandido = !_expandido),
           onExportar: widget.historial.isEmpty
               ? null
-              : () => CsvExport.exportar(
+              : () => SucsCsvExport.exportar(
                     context: context,
                     historial: widget.historial,
                   ),

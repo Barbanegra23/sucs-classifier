@@ -135,7 +135,7 @@ class EntradaHistorial {
 }
 
 /// Servicio de persistencia del historial.
-class HistorialService {
+class SucsHistorialService {
   static const _key = 'historial_muestras';
   static const int maxEntradas = 50;
 

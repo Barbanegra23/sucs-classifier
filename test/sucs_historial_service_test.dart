@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sucs_classifier/services/historial_service.dart';
+import 'package:sucs_classifier/services/sucs_historial_service.dart';
 import 'package:sucs_classifier/services/sucs_classifier.dart';
 
 void main() {
@@ -153,7 +153,7 @@ void main() {
     });
   });
 
-  group('HistorialService', () {
+  group('SucsHistorialService', () {
     setUp(() {
       // Reinicia el almacenamiento simulado antes de cada test para que
       // no queden datos de un test filtrándose al siguiente.
@@ -170,13 +170,13 @@ void main() {
         );
 
     test('cargar() sin datos previos devuelve lista vacía', () async {
-      final lista = await HistorialService.cargar();
+      final lista = await SucsHistorialService.cargar();
       expect(lista, isEmpty);
     });
 
     test('guardar() + cargar() hace round-trip', () async {
-      await HistorialService.guardar([muestra(nombre: 'A'), muestra(nombre: 'B')]);
-      final lista = await HistorialService.cargar();
+      await SucsHistorialService.guardar([muestra(nombre: 'A'), muestra(nombre: 'B')]);
+      final lista = await SucsHistorialService.cargar();
       expect(lista, hasLength(2));
       expect(lista[0].nombre, 'A');
       expect(lista[1].nombre, 'B');
@@ -184,57 +184,57 @@ void main() {
 
     test('cargar() con JSON corrupto no explota, devuelve lista vacía', () async {
       SharedPreferences.setMockInitialValues({'historial_muestras': 'esto no es json'});
-      final lista = await HistorialService.cargar();
+      final lista = await SucsHistorialService.cargar();
       expect(lista, isEmpty);
     });
 
     test('agregar() inserta la muestra nueva al principio', () async {
-      var lista = await HistorialService.agregar([], muestra(nombre: 'primera'));
-      lista = await HistorialService.agregar(lista, muestra(nombre: 'segunda'));
+      var lista = await SucsHistorialService.agregar([], muestra(nombre: 'primera'));
+      lista = await SucsHistorialService.agregar(lista, muestra(nombre: 'segunda'));
       expect(lista.map((e) => e.nombre), ['segunda', 'primera']);
 
       // Confirma que además quedó persistido, no solo en memoria.
-      final recargado = await HistorialService.cargar();
+      final recargado = await SucsHistorialService.cargar();
       expect(recargado.map((e) => e.nombre), ['segunda', 'primera']);
     });
 
     test('agregar() respeta el tope de maxEntradas descartando la más vieja', () async {
       var lista = <EntradaHistorial>[];
-      for (var i = 0; i < HistorialService.maxEntradas + 1; i++) {
-        lista = await HistorialService.agregar(lista, muestra(nombre: 'm$i'));
+      for (var i = 0; i < SucsHistorialService.maxEntradas + 1; i++) {
+        lista = await SucsHistorialService.agregar(lista, muestra(nombre: 'm$i'));
       }
-      expect(lista, hasLength(HistorialService.maxEntradas));
+      expect(lista, hasLength(SucsHistorialService.maxEntradas));
       // La más nueva (la última agregada) debe seguir presente al principio...
-      expect(lista.first.nombre, 'm${HistorialService.maxEntradas}');
+      expect(lista.first.nombre, 'm${SucsHistorialService.maxEntradas}');
       // ...y la más vieja (la primera que se agregó, "m0") debe haber sido descartada.
       expect(lista.any((e) => e.nombre == 'm0'), isFalse);
     });
 
     test('eliminar() saca la entrada del índice dado y persiste el cambio', () async {
-      var lista = await HistorialService.agregar([], muestra(nombre: 'A'));
-      lista = await HistorialService.agregar(lista, muestra(nombre: 'B'));
-      lista = await HistorialService.agregar(lista, muestra(nombre: 'C'));
+      var lista = await SucsHistorialService.agregar([], muestra(nombre: 'A'));
+      lista = await SucsHistorialService.agregar(lista, muestra(nombre: 'B'));
+      lista = await SucsHistorialService.agregar(lista, muestra(nombre: 'C'));
       // lista actual: [C, B, A]
 
-      lista = await HistorialService.eliminar(lista, 1); // saca 'B'
+      lista = await SucsHistorialService.eliminar(lista, 1); // saca 'B'
       expect(lista.map((e) => e.nombre), ['C', 'A']);
 
-      final recargado = await HistorialService.cargar();
+      final recargado = await SucsHistorialService.cargar();
       expect(recargado.map((e) => e.nombre), ['C', 'A']);
     });
 
     test('limpiar() deja el historial vacío', () async {
-      await HistorialService.guardar([muestra()]);
-      await HistorialService.limpiar();
-      final lista = await HistorialService.cargar();
+      await SucsHistorialService.guardar([muestra()]);
+      await SucsHistorialService.limpiar();
+      final lista = await SucsHistorialService.cargar();
       expect(lista, isEmpty);
     });
 
     test('actualizarNombre() modifica el nombre y persiste', () async {
-      var lista = await HistorialService.agregar([], muestra(nombre: 'Viejo'));
-      await HistorialService.actualizarNombre(lista, 0, 'Nuevo nombre');
+      var lista = await SucsHistorialService.agregar([], muestra(nombre: 'Viejo'));
+      await SucsHistorialService.actualizarNombre(lista, 0, 'Nuevo nombre');
 
-      final recargado = await HistorialService.cargar();
+      final recargado = await SucsHistorialService.cargar();
       expect(recargado[0].nombre, 'Nuevo nombre');
     });
   });

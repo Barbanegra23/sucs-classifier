@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/aashto_classifier.dart';
+import '../services/aashto_pdf_export.dart';
 import '../theme/app_colors.dart';
 import '../widgets/aashto/aashto_header.dart';
 import '../widgets/aashto/tamices_aashto_card.dart';
@@ -8,10 +10,11 @@ import '../widgets/aashto/aashto_result_card.dart';
 
 /// Pantalla de clasificación AASHTO (M 145 / ASTM D3282).
 ///
-/// v1: cubre la clasificación completa (grupos A-1 a A-7 + Índice de
-/// Grupo) con su propio formulario. A diferencia de HomeScreen (SUCS)
-/// todavía no tiene historial ni exportación a PDF — se pueden sumar
-/// más adelante siguiendo el mismo patrón que ya existe para SUCS.
+/// Cubre la clasificación completa (grupos A-1 a A-7 + Índice de
+/// Grupo) con su propio formulario, y exportación a PDF. A diferencia
+/// de HomeScreen (SUCS) todavía no tiene historial de muestras
+/// guardadas — se puede sumar más adelante siguiendo el mismo patrón
+/// que ya existe para SUCS.
 class AashtoScreen extends StatefulWidget {
   const AashtoScreen({super.key});
 
@@ -38,6 +41,7 @@ class _AashtoScreenState extends State<AashtoScreen> {
   // ── Estado ────────────────────────────────────────────────
   AashtoResult? _resultado;
   bool _autoValidate = false;
+  bool _exportando = false;
   final GlobalKey _resultadoKey = GlobalKey();
 
   @override
@@ -94,6 +98,79 @@ class _AashtoScreenState extends State<AashtoScreen> {
       _autoValidate = false;
     });
     _fnPasa10.requestFocus();
+  }
+
+  Future<void> _exportarPdf() async {
+    if (_exportando || _resultado == null) return;
+    setState(() => _exportando = true);
+    HapticFeedback.lightImpact();
+    try {
+      await AashtoPdfExport.exportar(
+        context: context,
+        resultado: _resultado!,
+        pasa10: double.parse(_pasa10.text),
+        pasa40: double.parse(_pasa40.text),
+        pasa200: double.parse(_pasa200.text),
+        ll: double.parse(_ll.text),
+        lp: double.parse(_lp.text),
+      );
+    } finally {
+      if (mounted) setState(() => _exportando = false);
+    }
+  }
+
+  Widget _buildExportButton(Color color) {
+    return OutlinedButton(
+      onPressed: _exportando ? null : _exportarPdf,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        side: BorderSide(color: color.withValues(alpha: _exportando ? 0.2 : 0.4)),
+        foregroundColor: color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: _exportando
+            ? SizedBox(
+                key: const ValueKey('loading'),
+                height: 18,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(color),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Generando…',
+                        style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13)),
+                  ],
+                ),
+              )
+            : Row(
+                key: const ValueKey('idle'),
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.picture_as_pdf_rounded, size: 17, color: color),
+                  const SizedBox(width: 7),
+                  Text('Exportar PDF',
+                      style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13)),
+                ],
+              ),
+      ),
+    );
   }
 
   @override
@@ -163,6 +240,8 @@ class _AashtoScreenState extends State<AashtoScreen> {
                       key: _resultadoKey,
                       child: AashtoResultCard(resultado: _resultado!),
                     ),
+                    const SizedBox(height: 12),
+                    _buildExportButton(colorDeGrupoAashto(_resultado!.grupo)),
                   ],
                   const SizedBox(height: 24),
                 ]),

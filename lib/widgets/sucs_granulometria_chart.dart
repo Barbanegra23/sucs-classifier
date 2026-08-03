@@ -27,14 +27,14 @@ class PuntoGranulometrico {
   const PuntoGranulometrico(this.diametroMm, this.porcentajePasa);
 }
 
-class GranulometriaChart extends StatelessWidget {
+class SucsGranulometriaChart extends StatelessWidget {
   final List<PuntoGranulometrico> puntos;
   final double? d10;
   final double? d30;
   final double? d60;
   final Color colorSuelo;
 
-  const GranulometriaChart({
+  const SucsGranulometriaChart({
     super.key,
     required this.puntos,
     required this.colorSuelo,
