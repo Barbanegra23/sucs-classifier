@@ -11,7 +11,7 @@ import 'cu_cc_chip.dart';
 ///  - null                    → mensaje de espera
 ///  - < [limiteSueloFino]     → campos D10/D30/D60 + preview de Cu/Cc
 ///  - >= [limiteSueloFino]    → mensaje "no aplican" (suelo fino)
-class GranulometriaCard extends StatelessWidget {
+class GranulometriaSucsCard extends StatelessWidget {
   final double? p200val;
   final double limiteSueloFino;
   final TextEditingController d10;
@@ -25,7 +25,7 @@ class GranulometriaCard extends StatelessWidget {
   /// Se dispara al confirmar D60 (último campo del formulario completo).
   final VoidCallback onSubmitFinal;
 
-  const GranulometriaCard({
+  const GranulometriaSucsCard({
     super.key,
     required this.p200val,
     required this.limiteSueloFino,

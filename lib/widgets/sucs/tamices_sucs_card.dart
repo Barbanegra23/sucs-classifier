@@ -4,7 +4,7 @@ import '../input_field.dart';
 
 /// Tarjeta de entrada de datos "Tamices": % pasa N°200 y % retenido N°4.
 /// Determina si el suelo es fino o grueso (ASTM D2487).
-class TamicesCard extends StatelessWidget {
+class TamicesSucsCard extends StatelessWidget {
   final TextEditingController pasa200;
   final TextEditingController retenidoN4;
   final FocusNode fnPasa200;
@@ -12,7 +12,7 @@ class TamicesCard extends StatelessWidget {
   final FocusNode fnNext;
   final bool autoValidate;
 
-  const TamicesCard({
+  const TamicesSucsCard({
     super.key,
     required this.pasa200,
     required this.retenidoN4,

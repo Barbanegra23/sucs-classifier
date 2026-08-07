@@ -8,7 +8,7 @@ import 'info_text.dart';
 ///  - null            → mensaje de espera ("completá % pasa 200 primero")
 ///  - < 5             → mensaje "no aplican" (finos insuficientes)
 ///  - >= 5            → campos LL / LP visibles
-class AtterbergCard extends StatelessWidget {
+class AtterbergSucsCard extends StatelessWidget {
   final double? p200val;
   final TextEditingController ll;
   final TextEditingController lp;
@@ -26,7 +26,7 @@ class AtterbergCard extends StatelessWidget {
 
   final bool autoValidate;
 
-  const AtterbergCard({
+  const AtterbergSucsCard({
     super.key,
     required this.p200val,
     required this.ll,

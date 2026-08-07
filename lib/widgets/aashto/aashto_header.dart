@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../header_widgets.dart';
 
-/// Encabezado de AashtoScreen. A diferencia de HomeHeader, incluye un
-/// botón de "volver" explícito (esta pantalla se llega vía
-/// `Navigator.push`, no es la pantalla raíz) y no tiene botón de tema
-/// ni de tutorial — para no duplicar esos controles en dos headers.
+/// Encabezado de AashtoScreen. Incluye un botón de "volver" (esta
+/// pantalla se llega vía `Navigator.push` desde el selector
+/// SUCS/AASHTO, no es la pantalla raíz) y no tiene botón de tema ni
+/// de tutorial — el tema es global (afecta a toda la app aunque el
+/// switch viva en SucsHeader) y el tutorial es contenido específico
+/// de SUCS, así que no aplica acá.
 class AashtoHeader extends StatelessWidget {
   const AashtoHeader({super.key});
 
@@ -32,7 +34,7 @@ class AashtoHeader extends StatelessWidget {
             IconButton(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              tooltip: 'Volver a SUCS',
+              tooltip: 'Volver',
             ),
             const SizedBox(width: 4),
             Expanded(
