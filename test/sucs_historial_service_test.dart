@@ -237,5 +237,117 @@ void main() {
       final recargado = await SucsHistorialService.cargar();
       expect(recargado[0].nombre, 'Nuevo nombre');
     });
+
+    test('actualizarNombre() cambia el nombre VISIBLE cuando hay metadata',
+        () async {
+      // Bug anterior: solo cambiaba el nombre legacy, pero nombreDisplay
+      // prioriza muestra.nombre → en pantalla seguía el nombre viejo.
+      final conMeta = EntradaHistorial(
+        resultado: SucsResult('CL', 'Arcilla de baja plasticidad', 12.0),
+        ll: 32,
+        lp: 20,
+        pasa200: 60,
+        retenidoN4: 0,
+        nombre: 'Viejo',
+        muestra: DatosMuestra(
+          nombre: 'Viejo',
+          ubicacion: 'Ruta 14',
+          fechaHora: DateTime(2026, 1, 1),
+        ),
+      );
+      final lista = await SucsHistorialService.agregar([], conMeta);
+      await SucsHistorialService.actualizarNombre(lista, 0, 'Nuevo');
+
+      expect(lista[0].nombreDisplay, 'Nuevo');
+      final recargado = await SucsHistorialService.cargar();
+      expect(recargado[0].nombreDisplay, 'Nuevo');
+      // El resto de la metadata se conserva.
+      expect(recargado[0].muestra!.ubicacion, 'Ruta 14');
+      expect(recargado[0].muestra!.fechaHora, DateTime(2026, 1, 1));
+    });
+
+    test('cargar() descarta solo la entrada dañada y conserva las demás',
+        () async {
+      await SucsHistorialService.guardar(
+          [muestra(nombre: 'A'), muestra(nombre: 'B')]);
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('historial_muestras')!;
+      // Inserta una entrada inválida (sin campos obligatorios) en el medio.
+      final corrupto = raw.replaceFirst('},{', '},{"symbol":"CL"},{');
+      await prefs.setString('historial_muestras', corrupto);
+
+      final lista = await SucsHistorialService.cargar();
+      expect(lista.map((e) => e.nombre), ['A', 'B']);
+      // Y guarda una copia del JSON original por si hay que recuperarlo.
+      expect(prefs.getString(SucsHistorialService.backupKey), corrupto);
+    });
+
+    test('JSON ilegible: se respalda antes de que un guardado lo pise',
+        () async {
+      SharedPreferences.setMockInitialValues(
+          {'historial_muestras': 'esto no es json'});
+      final lista = await SucsHistorialService.cargar();
+      await SucsHistorialService.agregar(lista, muestra(nombre: 'nueva'));
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(SucsHistorialService.backupKey),
+          'esto no es json');
+    });
+
+    test('cargar() sin errores no crea respaldo', () async {
+      await SucsHistorialService.guardar([muestra(nombre: 'A')]);
+      await SucsHistorialService.cargar();
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(SucsHistorialService.backupKey), isNull);
+    });
+
+    test('fecha inválida en la metadata no hace fallar la entrada', () async {
+      SharedPreferences.setMockInitialValues({
+        'historial_muestras':
+            '[{"symbol":"CL","description":"x","pi":12,"ll":32,"lp":20,'
+                '"pasa200":60,"retenidoN4":0,"nombre":"A",'
+                '"muestra":{"nombre":"A","fechaHora":"no-es-fecha"}}]',
+      });
+      final lista = await SucsHistorialService.cargar();
+      expect(lista, hasLength(1));
+      expect(lista[0].nombreDisplay, 'A');
+    });
+  });
+
+  group('EntradaHistorial D10/D30/D60', () {
+    test('round-trip con diámetros', () {
+      final e = EntradaHistorial(
+        resultado: SucsResult('SW', 'Arena bien graduada', 0),
+        ll: 0,
+        lp: 0,
+        pasa200: 3,
+        retenidoN4: 20,
+        cu: 8,
+        cc: 1.5,
+        d10: 0.1,
+        d30: 0.35,
+        d60: 0.8,
+      );
+      final r = EntradaHistorial.fromJson(e.toJson());
+      expect(r.d10, 0.1);
+      expect(r.d30, 0.35);
+      expect(r.d60, 0.8);
+    });
+
+    test('entradas viejas sin diámetros cargan con null', () {
+      final r = EntradaHistorial.fromJson({
+        'symbol': 'SW',
+        'description': 'x',
+        'pi': 0,
+        'll': 0,
+        'lp': 0,
+        'pasa200': 3,
+        'retenidoN4': 20,
+        'cu': 8,
+        'cc': 1.5,
+      });
+      expect(r.d10, isNull);
+      expect(r.cu, 8);
+    });
   });
 }

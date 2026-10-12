@@ -51,6 +51,12 @@ class _SucsScreenState extends State<SucsScreen> {
 
   // ── Estado ────────────────────────────────────────────────
   SucsResult? resultado;
+
+  /// Datos con los que se obtuvo [resultado]. La sección de resultado
+  /// (gráficos, memoria, PDF) y el guardado usan SIEMPRE estos valores
+  /// y no lo que haya en el formulario, que el usuario puede seguir
+  /// editando después de clasificar o al abrir una muestra del historial.
+  _DatosResultado? _datos;
   bool _autoValidate = false;
   final List<EntradaHistorial> _historial = [];
   final GlobalKey _resultadoKey = GlobalKey();
@@ -214,11 +220,22 @@ class _SucsScreenState extends State<SucsScreen> {
         throw Exception('Campos incompletos');
       }
 
-      final result = clasificarSuelo(SucsInput(
+      final datos = _DatosResultado(
         pasa200: p200!,
         retenidoN4: r4!,
         ll: _necesitaAtterberg ? ll! : 0,
         lp: _necesitaAtterberg ? lp! : 0,
+        cu: cu,
+        cc: cc,
+        d10: _esSueloGrueso ? d10 : null,
+        d30: _esSueloGrueso ? d30 : null,
+        d60: _esSueloGrueso ? d60 : null,
+      );
+      final result = clasificarSuelo(SucsInput(
+        pasa200: datos.pasa200,
+        retenidoN4: datos.retenidoN4,
+        ll: datos.ll,
+        lp: datos.lp,
         cu: cu ?? 0,
         cc: cc ?? 0,
       ));
@@ -228,7 +245,10 @@ class _SucsScreenState extends State<SucsScreen> {
       // Feedback háptico al clasificar
       HapticFeedback.mediumImpact();
 
-      setState(() => resultado = result);
+      setState(() {
+        resultado = result;
+        _datos = datos;
+      });
       WidgetsBinding.instance.addPostFrameCallback((_) => _irAlResultado());
     } catch (e, stack) {
       debugPrint('Error en clasificación: $e');
@@ -253,33 +273,22 @@ class _SucsScreenState extends State<SucsScreen> {
     );
     if (datos == null || !mounted) return;
 
-    final p200 = _parse(_pasa200.text) ?? 0;
-    final r4 = _parse(_retenidoN4.text) ?? 0;
-    final ll = _parse(_ll.text) ?? 0;
-    final lp = _parse(_lp.text) ?? 0;
-    double? cu;
-    double? cc;
-    if (_esSueloGrueso) {
-      final d10v = _parse(_d10.text);
-      final d30v = _parse(_d30.text);
-      final d60v = _parse(_d60.text);
-      if (d10v != null &&
-          d30v != null &&
-          d60v != null &&
-          d10v > 0 &&
-          d60v > 0) {
-        (cu, cc) = calcularCuCc(d10: d10v, d30: d30v, d60: d60v);
-      }
-    }
+    // Se guarda con los datos con que se clasificó, no con lo que haya
+    // quedado en el formulario si el usuario lo editó después.
+    final d = _datos;
+    if (d == null) return;
 
     final entrada = EntradaHistorial(
       resultado: resultado!,
-      ll: ll,
-      lp: lp,
-      pasa200: p200,
-      retenidoN4: r4,
-      cu: cu,
-      cc: cc,
+      ll: d.ll,
+      lp: d.lp,
+      pasa200: d.pasa200,
+      retenidoN4: d.retenidoN4,
+      cu: d.cu,
+      cc: d.cc,
+      d10: d.d10,
+      d30: d.d30,
+      d60: d.d60,
       muestra: datos,
       nombre: datos.nombre,
     );
@@ -344,6 +353,7 @@ class _SucsScreenState extends State<SucsScreen> {
       d30: _d30.text,
       d60: _d60.text,
       resultado: resultado,
+      datos: _datos,
       historial: List.from(_historial),
     );
 
@@ -362,6 +372,7 @@ class _SucsScreenState extends State<SucsScreen> {
         c.clear();
       }
       resultado = null;
+      _datos = null;
       _autoValidate = false;
       _resultadoFueraDeVista = false;
       // ✅ El historial de muestras guardadas NO se modifica.
@@ -387,6 +398,7 @@ class _SucsScreenState extends State<SucsScreen> {
       _d30.text = e.d30;
       _d60.text = e.d60;
       resultado = e.resultado;
+      _datos = e.datos;
       _estadoAnterior = null;
     });
   }
@@ -397,7 +409,7 @@ class _SucsScreenState extends State<SucsScreen> {
   }
 
   Future<void> _editarNombreMuestra(EntradaHistorial entrada) async {
-    final ctrl = TextEditingController(text: entrada.nombre);
+    final ctrl = TextEditingController(text: entrada.nombreDisplay);
     final nuevo = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
@@ -425,11 +437,77 @@ class _SucsScreenState extends State<SucsScreen> {
     if (nuevo != null && nuevo.isNotEmpty) {
       final idx = _historial.indexOf(entrada);
       if (idx >= 0) {
+        // renombrar() actualiza muestra.nombre, que es lo que se muestra.
         await SucsHistorialService.actualizarNombre(_historial, idx, nuevo);
+      } else {
+        entrada.renombrar(nuevo);
       }
-      if (mounted) setState(() => entrada.nombre = nuevo);
+      if (mounted) setState(() {});
     }
     ctrl.dispose();
+  }
+
+  /// Abre una muestra del historial: carga sus datos en el formulario y
+  /// muestra el resultado con ESOS datos (antes se mostraba el símbolo
+  /// guardado junto a gráficos y memoria del formulario actual).
+  ///
+  /// Se reclasifica con el criterio vigente; si difiere de lo guardado
+  /// (p. ej. muestras guardadas antes de una corrección de norma) se
+  /// avisa con un snackbar.
+  void _verMuestra(EntradaHistorial e) {
+    String fmt(double? v) {
+      if (v == null) return '';
+      return v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
+    }
+
+    final conAtterberg = e.pasa200 >= 5;
+    final esGrueso = e.pasa200 < _kLimiteSueloFino;
+
+    final actual = clasificarSuelo(SucsInput(
+      pasa200: e.pasa200,
+      retenidoN4: e.retenidoN4,
+      ll: e.ll,
+      lp: e.lp,
+      cu: e.cu ?? 0,
+      cc: e.cc ?? 0,
+    ));
+    // Entradas viejas pueden no tener todo lo necesario (p. ej. Cu):
+    // en ese caso se muestra el resultado tal como se guardó.
+    final mostrar = actual.symbol == 'ERROR' ? e.resultado : actual;
+
+    setState(() {
+      _pasa200.text = fmt(e.pasa200);
+      _retenidoN4.text = fmt(e.retenidoN4);
+      _ll.text = conAtterberg ? fmt(e.ll) : '';
+      _lp.text = conAtterberg ? fmt(e.lp) : '';
+      _d10.text = esGrueso ? fmt(e.d10) : '';
+      _d30.text = esGrueso ? fmt(e.d30) : '';
+      _d60.text = esGrueso ? fmt(e.d60) : '';
+      _autoValidate = false;
+      resultado = mostrar;
+      _datos = _DatosResultado(
+        pasa200: e.pasa200,
+        retenidoN4: e.retenidoN4,
+        ll: e.ll,
+        lp: e.lp,
+        cu: e.cu,
+        cc: e.cc,
+        d10: e.d10,
+        d30: e.d30,
+        d60: e.d60,
+      );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _irAlResultado());
+
+    if (mostrar.symbol != e.resultado.symbol) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          'Guardada como ${e.resultado.symbol}. Con el criterio actual '
+          'de la norma se clasifica como ${mostrar.symbol}.',
+        ),
+        duration: const Duration(seconds: 6),
+      ));
+    }
   }
 
   // ── Mensaje de campos faltantes ───────────────────────────
@@ -453,26 +531,12 @@ class _SucsScreenState extends State<SucsScreen> {
   @override
   Widget build(BuildContext context) {
     final p200val = double.tryParse(_pasa200.text);
-    final llVal = double.tryParse(_ll.text) ?? 0;
-    final lpVal = double.tryParse(_lp.text) ?? 0;
-    final d10Val = double.tryParse(_d10.text);
-    final d30Val = double.tryParse(_d30.text);
-    final d60Val = double.tryParse(_d60.text);
-    final double? cuVal = (d10Val != null && d60Val != null && d10Val > 0)
-        ? d60Val / d10Val
-        : null;
-    final double? ccVal = (d10Val != null &&
-            d30Val != null &&
-            d60Val != null &&
-            d10Val > 0 &&
-            d60Val > 0)
-        ? (d30Val * d30Val) / (d10Val * d60Val)
-        : null;
+    final datos = _datos;
 
-    // Historial a mostrar (excluye la entrada más reciente si corresponde
-    // al resultado actual ya guardado).
-    final historialVisible =
-        _historial.skip(resultado != null ? 1 : 0).toList();
+    // Se muestra el historial completo. Antes se ocultaba la primera
+    // entrada siempre que hubiera un resultado en pantalla, aunque ese
+    // resultado no se hubiera guardado (la última muestra desaparecía).
+    final historialVisible = _historial;
 
     return Scaffold(
       backgroundColor: context.appColors.background,
@@ -551,7 +615,7 @@ class _SucsScreenState extends State<SucsScreen> {
                     const SizedBox(height: 16),
                     SucsHistorialPanel(
                       historial: historialVisible,
-                      onTap: (e) => setState(() => resultado = e.resultado),
+                      onTap: _verMuestra,
                       onEditarNombre: _editarNombreMuestra,
                       onEliminar: (e) async {
                         final idx = _historial.indexOf(e);
@@ -580,23 +644,22 @@ class _SucsScreenState extends State<SucsScreen> {
                         child: child,
                       ),
                     ),
-                    child: resultado != null
+                    child: resultado != null && datos != null
                         ? Column(
                             key: _resultadoKey,
                             children: [
                               const SizedBox(height: 20),
                               SucsResultSection(
                                 resultado: resultado!,
-                                ll: llVal,
-                                pasa200: p200val ?? 0,
-                                retenidoN4:
-                                    double.tryParse(_retenidoN4.text) ?? 0,
-                                lp: lpVal,
-                                cu: cuVal,
-                                cc: ccVal,
-                                d10: double.tryParse(_d10.text),
-                                d30: double.tryParse(_d30.text),
-                                d60: double.tryParse(_d60.text),
+                                ll: datos.ll,
+                                pasa200: datos.pasa200,
+                                retenidoN4: datos.retenidoN4,
+                                lp: datos.lp,
+                                cu: datos.cu,
+                                cc: datos.cc,
+                                d10: datos.d10,
+                                d30: datos.d30,
+                                d60: datos.d60,
                                 // Botones integrados en la barra inferior del card.
                                 onGuardar: resultado!.symbol != 'ERROR'
                                     ? _guardarMuestra
@@ -784,6 +847,7 @@ class _EstadoFormulario {
   final String d30;
   final String d60;
   final SucsResult? resultado;
+  final _DatosResultado? datos;
   final List<EntradaHistorial> historial;
 
   const _EstadoFormulario({
@@ -795,6 +859,32 @@ class _EstadoFormulario {
     required this.d30,
     required this.d60,
     required this.resultado,
+    required this.datos,
     required this.historial,
+  });
+}
+
+/// Valores de entrada con los que se obtuvo el resultado en pantalla.
+class _DatosResultado {
+  final double pasa200;
+  final double retenidoN4;
+  final double ll;
+  final double lp;
+  final double? cu;
+  final double? cc;
+  final double? d10;
+  final double? d30;
+  final double? d60;
+
+  const _DatosResultado({
+    required this.pasa200,
+    required this.retenidoN4,
+    required this.ll,
+    required this.lp,
+    this.cu,
+    this.cc,
+    this.d10,
+    this.d30,
+    this.d60,
   });
 }

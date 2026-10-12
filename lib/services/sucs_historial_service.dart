@@ -49,9 +49,8 @@ class DatosMuestra {
         profundidad: j['profundidad'] as String? ?? '',
         operador: j['operador'] as String? ?? '',
         notas: j['notas'] as String? ?? '',
-        fechaHora: j['fechaHora'] != null
-            ? DateTime.parse(j['fechaHora'] as String)
-            : DateTime.now(),
+        fechaHora: DateTime.tryParse(j['fechaHora'] as String? ?? '') ??
+            DateTime.now(),
         proyectoId: j['proyectoId'] as String? ?? '',
         proyectoNombre: j['proyectoNombre'] as String? ?? '',
         expediente: j['expediente'] as String? ?? '',
@@ -69,6 +68,18 @@ class DatosMuestra {
   }
 
   bool get tieneProyecto => proyectoId.isNotEmpty;
+
+  DatosMuestra copyWith({String? nombre}) => DatosMuestra(
+        nombre: nombre ?? this.nombre,
+        ubicacion: ubicacion,
+        profundidad: profundidad,
+        operador: operador,
+        notas: notas,
+        fechaHora: fechaHora,
+        proyectoId: proyectoId,
+        proyectoNombre: proyectoNombre,
+        expediente: expediente,
+      );
 }
 
 /// Modelo de una muestra clasificada con metadata completa.
@@ -77,8 +88,13 @@ class EntradaHistorial {
   final double ll, lp, pasa200, retenidoN4;
   final double? cu, cc;
 
+  /// Diámetros característicos (mm). Solo suelos gruesos; null en
+  /// entradas guardadas antes de esta versión.
+  final double? d10, d30, d60;
+
   /// Metadata de la muestra. Puede ser null si se guardó antes de esta versión.
-  final DatosMuestra? muestra;
+  /// No es final para poder renombrar la muestra (ver [renombrar]).
+  DatosMuestra? muestra;
 
   /// Compatibilidad hacia atrás: nombre suelto (versión anterior).
   String nombre;
@@ -91,9 +107,20 @@ class EntradaHistorial {
     required this.retenidoN4,
     this.cu,
     this.cc,
+    this.d10,
+    this.d30,
+    this.d60,
     this.muestra,
     this.nombre = '',
   });
+
+  /// Cambia el nombre visible de la muestra. Actualiza tanto la metadata
+  /// como el campo legacy, porque [nombreDisplay] prioriza
+  /// `muestra.nombre`: cambiar solo `nombre` no se veía en pantalla.
+  void renombrar(String nuevo) {
+    nombre = nuevo;
+    if (muestra != null) muestra = muestra!.copyWith(nombre: nuevo);
+  }
 
   // ── Serialización ──────────────────────────────────────────
 
@@ -107,6 +134,9 @@ class EntradaHistorial {
         'retenidoN4': retenidoN4,
         if (cu != null) 'cu': cu,
         if (cc != null) 'cc': cc,
+        if (d10 != null) 'd10': d10,
+        if (d30 != null) 'd30': d30,
+        if (d60 != null) 'd60': d60,
         'nombre': nombre,
         if (muestra != null) 'muestra': muestra!.toJson(),
       };
@@ -121,6 +151,9 @@ class EntradaHistorial {
         retenidoN4: (json['retenidoN4'] as num).toDouble(),
         cu: json['cu'] != null ? (json['cu'] as num).toDouble() : null,
         cc: json['cc'] != null ? (json['cc'] as num).toDouble() : null,
+        d10: (json['d10'] as num?)?.toDouble(),
+        d30: (json['d30'] as num?)?.toDouble(),
+        d60: (json['d60'] as num?)?.toDouble(),
         nombre: json['nombre'] as String? ?? '',
         muestra: json['muestra'] != null
             ? DatosMuestra.fromJson(json['muestra'] as Map<String, dynamic>)
@@ -137,22 +170,43 @@ class EntradaHistorial {
 /// Servicio de persistencia del historial.
 class SucsHistorialService {
   static const _key = 'historial_muestras';
+
+  /// Copia del JSON crudo cuando no se pudo leer completo. Evita que el
+  /// próximo guardado pise para siempre las muestras que no se pudieron
+  /// interpretar (antes, una sola entrada dañada vaciaba el historial y
+  /// el siguiente `agregar` borraba todo lo anterior).
+  static const backupKey = 'historial_muestras_backup';
   static const int maxEntradas = 50;
 
   static Future<List<EntradaHistorial>> cargar() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw == null) return [];
+
+    List<dynamic> lista;
     try {
-      final lista = jsonDecode(raw) as List<dynamic>;
-      return lista
-          .map((e) => EntradaHistorial.fromJson(e as Map<String, dynamic>))
-          .toList();
+      lista = jsonDecode(raw) as List<dynamic>;
     } catch (e, stack) {
-      debugPrint('Error cargando historial: $e');
+      debugPrint('Historial ilegible, se respalda en "$backupKey": $e');
       debugPrintStack(stackTrace: stack);
+      await prefs.setString(backupKey, raw);
       return [];
     }
+
+    // Cada entrada se interpreta por separado: una dañada no hace
+    // perder las demás.
+    final resultado = <EntradaHistorial>[];
+    var fallidas = 0;
+    for (final e in lista) {
+      try {
+        resultado.add(EntradaHistorial.fromJson(e as Map<String, dynamic>));
+      } catch (err) {
+        fallidas++;
+        debugPrint('Entrada de historial descartada: $err');
+      }
+    }
+    if (fallidas > 0) await prefs.setString(backupKey, raw);
+    return resultado;
   }
 
   static Future<void> guardar(List<EntradaHistorial> lista) async {
@@ -190,7 +244,7 @@ class SucsHistorialService {
     int indice,
     String nombre,
   ) async {
-    actual[indice].nombre = nombre;
+    actual[indice].renombrar(nombre);
     await guardar(actual);
   }
 }

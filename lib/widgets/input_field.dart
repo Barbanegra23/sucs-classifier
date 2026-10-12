@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'decimal_input_formatter.dart';
 import 'info_tooltip.dart';
 import '../theme/app_colors.dart';
 
@@ -63,16 +63,14 @@ class InputField extends StatelessWidget {
           }
         },
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-        ],
+        inputFormatters: const [DecimalInputFormatter()],
         autovalidateMode: autoValidate
             ? AutovalidateMode.onUserInteraction
             : AutovalidateMode.disabled,
         validator: enabled ? (value) => validar(value ?? '') : null,
         decoration: InputDecoration(
           labelText: label,
-          hintText: enabled ? (hintText ?? 'Ej: 35.5') : 'No aplica',
+          hintText: enabled ? (hintText ?? 'Ej: 35,5') : 'No aplica',
           filled: true,
           fillColor:
               enabled ? context.appColors.inputFill : Colors.grey.shade100,
