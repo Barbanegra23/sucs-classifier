@@ -2,8 +2,14 @@ class SucsInterpretation {
   // 🧠 RESUMEN INTELIGENTE
   static String generarResumen(String simbolo, double pi, double ll) {
     final base = simbolo.split("-").first;
-    final a = 0.73 * (ll - 20);
+    final ultimo = simbolo.split("-").last;
     final esDual = simbolo.contains("-");
+    // Arcilloso/limoso se deduce del símbolo ya clasificado (que aplica
+    // la carta de plasticidad completa, incluido PI < 4 → limo), en vez
+    // de recalcular contra la Línea A con un criterio distinto.
+    final esArcilloso = ["CL", "CH"].contains(base) ||
+        base.endsWith("C") ||
+        ultimo.endsWith("C");
 
     final esGranularLimpio = ["GW", "GP", "SW", "SP"].contains(base) && pi < 7;
 
@@ -40,18 +46,16 @@ class SucsInterpretation {
     if (esGranularLimpio) {
       comportamiento = "comportamiento no cohesivo (granular)";
     } else if (esDual) {
-      comportamiento = pi > a
+      comportamiento = esArcilloso
           ? "comportamiento mixto con influencia arcillosa"
           : "comportamiento mixto con influencia limosa";
     } else {
-      comportamiento = pi > a
+      comportamiento = esArcilloso
           ? "comportamiento cohesivo (arcilloso)"
           : "comportamiento limoso";
     }
 
     List<String> condiciones = [];
-
-    final esArcilloso = pi > a;
 
     if (esArcilloso && pi > 20) {
       condiciones.add("potencialmente expansivo");
@@ -171,6 +175,17 @@ class SucsInterpretation {
           rec.add(
               "Suelo altamente compresible — requiere estudio especial de consolidación");
         }
+        break;
+
+      case "GC-GM":
+      case "SC-SM":
+        rec.add(
+            "Finos limo-arcillosos (zona CL-ML) — ventana de compactación estrecha, controlar humedad con precisión");
+        rec.add(
+            "Sensible a saturación: la fracción limosa favorece ascensión capilar — prever drenaje");
+        rec.add(
+            "Cohesión baja e inconsistente — no confiar en resistencia en estado seco");
+        rec.add("Verificar CBR saturado antes de uso como subrasante");
         break;
 
       // ── SÍMBOLOS DUALES ─────────────────────────────
@@ -321,6 +336,22 @@ class SucsInterpretation {
         "Gradación deficiente — vacíos irregulares con cohesión parcial",
         "La cohesión de los finos puede enmascarar inestabilidad de gradación",
         "Baja permeabilidad — los finos arcillosos obturan los poros",
+      ];
+    }
+    if (simbolo == "GC-GM") {
+      return [
+        "Grava con finos limo-arcillosos (zona CL-ML de la carta de plasticidad)",
+        "Comportamiento intermedio entre GC y GM: cohesión baja y sensibilidad hídrica",
+        "Permeabilidad baja a media",
+        "Pérdida de resistencia ante saturación",
+      ];
+    }
+    if (simbolo == "SC-SM") {
+      return [
+        "Arena con finos limo-arcillosos (zona CL-ML de la carta de plasticidad)",
+        "Comportamiento intermedio entre SC y SM: cohesión baja y sensibilidad hídrica",
+        "Permeabilidad baja a media",
+        "Susceptible a pérdida de resistencia al saturarse",
       ];
     }
     if (simbolo == "SP-SM") {

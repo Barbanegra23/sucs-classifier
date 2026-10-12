@@ -42,6 +42,8 @@ class SucsPdfExport {
     final pi = resultado.pi;
     final lineaAval = (0.73 * (ll - 20)).clamp(0.0, 999.0);
     final sobreA = pi >= lineaAval;
+    // Misma regla que el clasificador (PI < 4 → limoso aunque esté sobre A).
+    final tipoFinos = clasificarFinos(ll, pi);
     final esGrueso = pasa200 < 50.0;
     final chips = _chips(resultado.symbol, pi);
     final resumen = SucsInterpretation.generarResumen(resultado.symbol, pi, ll);
@@ -160,7 +162,7 @@ class SucsPdfExport {
                                 fontSize: 13,
                                 color: white,
                                 font: pw.Font.helveticaBold())),
-                        pw.Text(sobreA ? 'Arcilloso' : 'Limoso',
+                        pw.Text(etiquetaFinos(tipoFinos).replaceAll(' (CL-ML)', ''),
                             style: pw.TextStyle(
                                 fontSize: 8,
                                 color: white)),
@@ -363,9 +365,7 @@ class SucsPdfExport {
                                         ),
                                         child: pw.Center(
                                           child: pw.Text(
-                                            sobreA
-                                                ? 'PI > A  ->  Arcilloso'
-                                                : 'PI < A  ->  Limoso',
+                                            '${sobreA ? 'PI >= A' : 'PI < A'}${sobreA && pi < 4 ? ', PI < 4' : ''}  ->  ${etiquetaFinos(tipoFinos).replaceAll(' (CL-ML)', '')}',
                                             style: pw.TextStyle(
                                                 fontSize: 8.5,
                                                 color: white,
@@ -1174,6 +1174,8 @@ class SucsPdfExport {
       chips.add('Cohesivo');
     } else if (['ML', 'MH'].contains(base)) {
       chips.add('Baja cohesion');
+    } else if (['GC-GM', 'SC-SM'].contains(simbolo)) {
+      chips.add('Con limo y arcilla');
     } else if (['GM', 'SM'].contains(segundo)) {
       chips.add('Con limo');
     } else if (['GC', 'SC'].contains(segundo)) {

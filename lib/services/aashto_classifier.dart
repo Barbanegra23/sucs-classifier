@@ -117,33 +117,40 @@ AashtoResult clasificarAashto(AashtoInput input) {
 
   String grupo;
 
+  // Los límites de la tabla (≤40 / ≥41, ≤10 / ≥11, ≥51) están
+  // pensados para valores enteros. Para que un LL = 40.5 o un
+  // PI = 10.5 no caigan en un hueco, se compara siempre contra el
+  // umbral inferior con ">" (LL > 40 equivale a "≥ 41").
+  final llAlto = ll > 40;
+  final piAlto = pi > 10;
+
   if (p200 <= 35) {
     // ── MATERIALES GRANULARES ──────────────────────────────
     if (p10 <= 50 && p40 <= 30 && p200 <= 15 && pi <= 6) {
       grupo = 'A-1-a';
     } else if (p40 <= 50 && p200 <= 25 && pi <= 6) {
       grupo = 'A-1-b';
-    } else if (p200 <= 10 && pi == 0 && p40 >= 51) {
+    } else if (p40 > 50 && p200 <= 10 && pi == 0) {
       grupo = 'A-3';
-    } else if (ll <= 40 && pi <= 10) {
+    } else if (!llAlto && !piAlto) {
       grupo = 'A-2-4';
-    } else if (ll >= 41 && pi <= 10) {
+    } else if (llAlto && !piAlto) {
       grupo = 'A-2-5';
-    } else if (ll <= 40 && pi >= 11) {
+    } else if (!llAlto && piAlto) {
       grupo = 'A-2-6';
     } else {
       grupo = 'A-2-7';
     }
   } else {
     // ── MATERIALES LIMO-ARCILLOSOS (>35% pasa N°200) ───────
-    if (ll <= 40 && pi <= 10) {
+    if (!llAlto && !piAlto) {
       grupo = 'A-4';
-    } else if (ll >= 41 && pi <= 10) {
+    } else if (llAlto && !piAlto) {
       grupo = 'A-5';
-    } else if (ll <= 40 && pi >= 11) {
+    } else if (!llAlto && piAlto) {
       grupo = 'A-6';
     } else {
-      // LL≥41 y PI≥11 → A-7-5 o A-7-6 según relación con la Línea A
+      // LL > 40 y PI > 10 → A-7-5 o A-7-6 según PI vs LL − 30
       grupo = (pi <= ll - 30) ? 'A-7-5' : 'A-7-6';
     }
   }

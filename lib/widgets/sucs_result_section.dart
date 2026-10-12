@@ -101,6 +101,8 @@ class _SucsResultSectionState extends State<SucsResultSection> {
       chips.add('Cohesivo');
     } else if (['ML', 'MH'].contains(base)) {
       chips.add('Baja cohesión');
+    } else if (['GC-GM', 'SC-SM'].contains(simbolo)) {
+      chips.add('Con limo y arcilla');
     } else if (['GM', 'SM'].contains(segundo)) {
       chips.add('Con limo');
     } else if (['GC', 'SC'].contains(segundo)) {

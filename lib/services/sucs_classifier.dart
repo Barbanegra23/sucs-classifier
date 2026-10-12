@@ -16,6 +16,33 @@ double lineaA(double ll) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// CLASIFICACIÓN DE LOS FINOS (carta de plasticidad)
+// ─────────────────────────────────────────────────────────────
+
+/// Tipo de finos según la carta de plasticidad (ASTM D2487, Fig. 4):
+///   • arcilla        → PI > 7 y sobre/en la Línea A          (CL / CH)
+///   • arcillaLimosa  → 4 ≤ PI ≤ 7 y sobre/en la Línea A      (CL-ML)
+///   • limo           → PI < 4 o bajo la Línea A              (ML / MH)
+enum TipoFinos { arcilla, arcillaLimosa, limo }
+
+/// Única fuente de verdad para decidir si los finos son arcillosos,
+/// limosos o de la zona CL-ML. La usan el clasificador, la memoria
+/// de cálculo y el PDF.
+TipoFinos clasificarFinos(double ll, double pi) {
+  final a = lineaA(ll);
+  if (pi < a || pi < 4) return TipoFinos.limo;
+  if (pi <= 7) return TipoFinos.arcillaLimosa;
+  return TipoFinos.arcilla;
+}
+
+/// Texto corto para UI / PDF.
+String etiquetaFinos(TipoFinos t) => switch (t) {
+      TipoFinos.arcilla => 'Arcilloso',
+      TipoFinos.arcillaLimosa => 'Limo-arcilloso (CL-ML)',
+      TipoFinos.limo => 'Limoso',
+    };
+
+// ─────────────────────────────────────────────────────────────
 // FUNCIÓN PRINCIPAL DE CLASIFICACIÓN
 // ─────────────────────────────────────────────────────────────
 
@@ -31,6 +58,10 @@ SucsResult clasificarSuelo(SucsInput input) {
   // ── Validaciones ────────────────────────────────────────────
   if (p200 < 0 || p200 > 100) {
     return SucsResult('ERROR', 'Datos inválidos: % pasa 200 fuera de rango', 0);
+  }
+  if (r4 < 0 || r4 > 100) {
+    return SucsResult(
+        'ERROR', 'Datos inválidos: % retenido N°4 fuera de rango', 0);
   }
   if (ll < 0 || lp < 0) {
     return SucsResult(
@@ -59,31 +90,25 @@ SucsResult clasificarSuelo(SucsInput input) {
   }
 
   // ── SUELOS GRUESOS (pasa N°200 < 50%) ───────────────────────
-  // Validación extra para suelos gruesos
-  if (cu <= 0) {
+  // Cu/Cc solo intervienen con menos de 12% de finos. Con > 12% la
+  // clasificación depende únicamente de la plasticidad de los finos.
+  if (p200 <= 12 && cu <= 0) {
     return SucsResult('ERROR', 'Datos inválidos: Cu debe ser mayor que 0', 0);
   }
 
-  // Porcentaje de gruesos totales
-  final gruesos = 100 - p200;
-
-  // Guardia: si gruesos es 0 o negativo no podemos calcular pctGrava.
-  // En la práctica ya fue filtrado por p200 >= 50 arriba, pero como
-  // defensa ante valores límite (p200 = 100 con suelo grueso) lo
-  // manejamos explícitamente.
-  if (gruesos <= 0) {
-    return SucsResult('ERROR',
-        'Datos inválidos: % pasa 200 = 100 en suelo grueso es imposible', 0);
-  }
-
-  // Porcentaje de grava dentro de los gruesos
-  final pctGrava = (r4 / gruesos) * 100;
-
-  if (pctGrava >= 50) {
+  if (esGrava(pasa200: p200, retenidoN4: r4)) {
     return _clasificarGrava(p200, ll, pi, cu, cc);
   } else {
     return _clasificarArena(p200, ll, pi, cu, cc);
   }
+}
+
+/// ASTM D2487: es GRAVA si MÁS del 50% de la fracción gruesa queda
+/// retenida en el tamiz N°4. Con exactamente 50% es ARENA.
+/// Equivale a comparar R4 contra la fracción arena (100 − P200 − R4).
+bool esGrava({required double pasa200, required double retenidoN4}) {
+  final arena = 100 - pasa200 - retenidoN4;
+  return retenidoN4 > arena;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -91,38 +116,25 @@ SucsResult clasificarSuelo(SucsInput input) {
 // ─────────────────────────────────────────────────────────────
 
 SucsResult _clasificarSueloFino(double ll, double pi) {
-  final a = lineaA(ll);
+  final finos = clasificarFinos(ll, pi);
 
-  // ── CL-ML: zona de transición ASTM D2487 ──────────────────
-  // Condiciones exactas según norma:
-  //   • PI entre 4 y 7  (inclusive)
-  //   • PI ≥ Línea A  (sobre o sobre la línea)
-  // No hay restricción de LL en la norma — el límite LL 30–50
-  // era una simplificación incorrecta del código anterior.
-  // Casos borde:
-  //   • PI = 4 exacto y sobre Línea A → CL-ML
-  //   • PI = 7 exacto y sobre Línea A → puede ser CL también;
-  //     ASTM D2487 indica que si PI > 7 y sobre A → CL directo.
-  if (pi >= 4 && pi <= 7 && pi >= a) {
+  // CL-ML: 4 ≤ PI ≤ 7 y sobre/en la Línea A. Solo es posible con
+  // LL < ~29.6 (donde la Línea A todavía está por debajo de PI = 7).
+  if (finos == TipoFinos.arcillaLimosa) {
     return SucsResult('CL-ML', 'Arcilla limosa — zona de transición', pi);
   }
 
+  final esArcilla = finos == TipoFinos.arcilla;
   if (ll < 50) {
-    // Baja plasticidad (LL < 50)
-    // PI > 0 es requisito: con PI=0 (no plástico) y LineaA=0,
-    // "pi >= a" sería 0>=0=true → CL incorrecto. Debe ir a ML.
-    if (pi > 0 && pi >= a) {
-      return SucsResult('CL', 'Arcilla de baja plasticidad', pi);
-    } else {
-      return SucsResult('ML', 'Limo de baja plasticidad', pi);
-    }
+    // CL exige PI > 7 y sobre la Línea A. Con PI < 4 es ML aunque
+    // el punto quede sobre la Línea A (LL < 25.5).
+    return esArcilla
+        ? SucsResult('CL', 'Arcilla de baja plasticidad', pi)
+        : SucsResult('ML', 'Limo de baja plasticidad', pi);
   } else {
-    // Alta plasticidad (LL ≥ 50)
-    if (pi > 0 && pi >= a) {
-      return SucsResult('CH', 'Arcilla de alta plasticidad', pi);
-    } else {
-      return SucsResult('MH', 'Limo de alta plasticidad (limo elástico)', pi);
-    }
+    return esArcilla
+        ? SucsResult('CH', 'Arcilla de alta plasticidad', pi)
+        : SucsResult('MH', 'Limo de alta plasticidad (limo elástico)', pi);
   }
 }
 
@@ -132,21 +144,21 @@ SucsResult _clasificarSueloFino(double ll, double pi) {
 
 SucsResult _clasificarGrava(
     double p200, double ll, double pi, double cu, double cc) {
-  final a = lineaA(ll);
   final bienGraduada = cu >= 4 && cc >= 1 && cc <= 3;
 
   if (p200 < 5) {
     // Limpia: solo Cu y Cc deciden
-    if (bienGraduada) {
-      return SucsResult('GW', 'Grava bien graduada', pi);
-    } else {
-      return SucsResult('GP', 'Grava mal graduada', pi);
-    }
-  } else if (p200 <= 12) {
-    // Zona dual: graduación + plasticidad de finos
-    // PI > 0 evita que finos no plásticos (PI=0) se traten como
-    // arcillosos cuando LineaA también es 0.
-    final esArcillosa = pi > 0 && pi >= a;
+    return bienGraduada
+        ? SucsResult('GW', 'Grava bien graduada', pi)
+        : SucsResult('GP', 'Grava mal graduada', pi);
+  }
+
+  final finos = clasificarFinos(ll, pi);
+
+  if (p200 <= 12) {
+    // Zona dual (5–12%). Según el diagrama de flujo de ASTM D2487,
+    // finos CL, CH o CL-ML → segundo símbolo GC; ML o MH → GM.
+    final esArcillosa = finos != TipoFinos.limo;
     if (bienGraduada) {
       return esArcillosa
           ? SucsResult('GW-GC', 'Grava bien graduada con arcilla', pi)
@@ -156,14 +168,15 @@ SucsResult _clasificarGrava(
           ? SucsResult('GP-GC', 'Grava mal graduada con arcilla', pi)
           : SucsResult('GP-GM', 'Grava mal graduada con limo', pi);
     }
-  } else {
-    // p200 > 12%: plasticidad de finos decide
-    if (pi > 0 && pi >= a) {
-      return SucsResult('GC', 'Grava arcillosa', pi);
-    } else {
-      return SucsResult('GM', 'Grava limosa', pi);
-    }
   }
+
+  // p200 > 12%: plasticidad de finos decide
+  return switch (finos) {
+    TipoFinos.arcilla => SucsResult('GC', 'Grava arcillosa', pi),
+    TipoFinos.arcillaLimosa =>
+      SucsResult('GC-GM', 'Grava limo-arcillosa', pi),
+    TipoFinos.limo => SucsResult('GM', 'Grava limosa', pi),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -172,21 +185,19 @@ SucsResult _clasificarGrava(
 
 SucsResult _clasificarArena(
     double p200, double ll, double pi, double cu, double cc) {
-  final a = lineaA(ll);
   final bienGraduada = cu >= 6 && cc >= 1 && cc <= 3;
 
   if (p200 < 5) {
-    // Limpia
-    if (bienGraduada) {
-      return SucsResult('SW', 'Arena bien graduada', pi);
-    } else {
-      return SucsResult('SP', 'Arena mal graduada', pi);
-    }
-  } else if (p200 <= 12) {
-    // Zona dual
-    // PI > 0 evita que finos no plásticos (PI=0) se traten como
-    // arcillosos cuando LineaA también es 0.
-    final esArcillosa = pi > 0 && pi >= a;
+    return bienGraduada
+        ? SucsResult('SW', 'Arena bien graduada', pi)
+        : SucsResult('SP', 'Arena mal graduada', pi);
+  }
+
+  final finos = clasificarFinos(ll, pi);
+
+  if (p200 <= 12) {
+    // Zona dual (5–12%): finos CL, CH o CL-ML → SC; ML o MH → SM.
+    final esArcillosa = finos != TipoFinos.limo;
     if (bienGraduada) {
       return esArcillosa
           ? SucsResult('SW-SC', 'Arena bien graduada con arcilla', pi)
@@ -196,14 +207,15 @@ SucsResult _clasificarArena(
           ? SucsResult('SP-SC', 'Arena mal graduada con arcilla', pi)
           : SucsResult('SP-SM', 'Arena mal graduada con limo', pi);
     }
-  } else {
-    // p200 > 12%
-    if (pi > 0 && pi >= a) {
-      return SucsResult('SC', 'Arena arcillosa', pi);
-    } else {
-      return SucsResult('SM', 'Arena limosa', pi);
-    }
   }
+
+  // p200 > 12%
+  return switch (finos) {
+    TipoFinos.arcilla => SucsResult('SC', 'Arena arcillosa', pi),
+    TipoFinos.arcillaLimosa =>
+      SucsResult('SC-SM', 'Arena limo-arcillosa', pi),
+    TipoFinos.limo => SucsResult('SM', 'Arena limosa', pi),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -310,13 +322,14 @@ List<PasoClasificacion> generarMemoria({
     // ── Grueso: grava o arena ────────────────────────────
     final fracGrava = retenidoN4;
     final fracArena = 100 - pasa200 - retenidoN4;
-    final esGrava = fracGrava > fracArena;
+    final grava = esGrava(pasa200: pasa200, retenidoN4: retenidoN4);
     pasos.add(PasoClasificacion(
       numero: '2',
-      titulo: esGrava ? 'Fracción dominante: Grava' : 'Fracción dominante: Arena',
-      detalle: esGrava
-          ? 'R4 = ${retenidoN4.toStringAsFixed(1)} % > Arena = ${fracArena.toStringAsFixed(1)} % → G'
-          : 'Arena = ${fracArena.toStringAsFixed(1)} % > R4 = ${retenidoN4.toStringAsFixed(1)} % → S',
+      titulo: grava ? 'Fracción dominante: Grava' : 'Fracción dominante: Arena',
+      detalle: grava
+          ? 'R4 = ${fracGrava.toStringAsFixed(1)} % > Arena = ${fracArena.toStringAsFixed(1)} % → G'
+          : 'Arena = ${fracArena.toStringAsFixed(1)} % ≥ R4 = ${fracGrava.toStringAsFixed(1)} % → S'
+              '${fracArena == fracGrava ? '  (grava requiere MÁS del 50 % de la fracción gruesa)' : ''}',
     ));
 
     // ── Zona de finos ────────────────────────────────────
@@ -337,7 +350,7 @@ List<PasoClasificacion> generarMemoria({
 
     if (zonaFinos == 'limpia' || zonaFinos == 'dual') {
       if (cu != null && cc != null) {
-        final umbralCu = esGrava ? 4.0 : 6.0;
+        final umbralCu = grava ? 4.0 : 6.0;
         final bienGrad = cu >= umbralCu && cc >= 1 && cc <= 3;
         pasos.add(PasoClasificacion(
           numero: '4',
@@ -351,16 +364,29 @@ List<PasoClasificacion> generarMemoria({
       }
     }
 
-    if (zonaFinos != 'limpia' && pasa200 >= 5) {
+    if (zonaFinos != 'limpia') {
       final aVal = lineaA(ll);
-      final esArcillosa = pi > 0 && pi >= aVal;
+      final finos = clasificarFinos(ll, pi);
+      final String conclusion;
+      if (zonaFinos == 'dual') {
+        conclusion = finos == TipoFinos.limo
+            ? '→ Finos ML/MH → segundo símbolo ${grava ? 'GM' : 'SM'}'
+            : '→ Finos ${finos == TipoFinos.arcillaLimosa ? 'CL-ML' : 'CL/CH'} → segundo símbolo ${grava ? 'GC' : 'SC'}';
+      } else {
+        conclusion = switch (finos) {
+          TipoFinos.arcilla => '→ Finos CL/CH → ${grava ? 'GC' : 'SC'}',
+          TipoFinos.arcillaLimosa =>
+            '→ Finos CL-ML (4 ≤ PI ≤ 7) → ${grava ? 'GC-GM' : 'SC-SM'}',
+          TipoFinos.limo => '→ Finos ML/MH → ${grava ? 'GM' : 'SM'}',
+        };
+      }
       pasos.add(PasoClasificacion(
         numero: zonaFinos == 'dual' ? '5' : '4',
         titulo: 'Tipo de finos',
         detalle: 'PI = ${pi.toStringAsFixed(1)}'
             '  Línea A (LL=${ll.toStringAsFixed(0)}) = ${aVal.toStringAsFixed(2)}'
-            '${esArcillosa ? '  → Arcilloso (PI ≥ A)' : '  → Limoso (PI < A)'}',
-        cumple: esArcillosa,
+            '${pi < 4 ? '  PI < 4' : ''}  $conclusion',
+        cumple: finos != TipoFinos.limo,
       ));
     }
   } else {
@@ -378,9 +404,10 @@ List<PasoClasificacion> generarMemoria({
       detalle: 'Línea A (LL=${ll.toStringAsFixed(0)}) = 0.73 × (${ll.toStringAsFixed(0)} − 20) = ${aVal.toStringAsFixed(2)}',
     ));
 
-    // ── Zona CL-ML ───────────────────────────────────────
-    final enZonaCLML = pi >= 4 && pi <= 7 && pi >= aVal;
-    if (enZonaCLML || resultado.symbol == 'CL-ML') {
+    final finos = clasificarFinos(ll, pi);
+    final sobreA = pi >= aVal;
+
+    if (finos == TipoFinos.arcillaLimosa) {
       pasos.add(PasoClasificacion(
         numero: '4',
         titulo: 'Zona de transición CL-ML',
@@ -390,13 +417,18 @@ List<PasoClasificacion> generarMemoria({
         cumple: true,
       ));
     } else {
-      final sobreA = pi >= aVal;
+      final esArcilla = finos == TipoFinos.arcilla;
       pasos.add(PasoClasificacion(
         numero: '4',
-        titulo: sobreA ? 'Posición: sobre Línea A → Arcilla' : 'Posición: bajo Línea A → Limo',
+        titulo: esArcilla
+            ? 'Posición: sobre Línea A y PI > 7 → Arcilla'
+            : (sobreA
+                ? 'PI < 4 → Limo (aunque esté sobre la Línea A)'
+                : 'Posición: bajo Línea A → Limo'),
         detalle: 'PI = ${pi.toStringAsFixed(1)} ${sobreA ? '≥' : '<'} Línea A (${aVal.toStringAsFixed(2)})'
-            ' → ${sobreA ? 'C' : 'M'}',
-        cumple: sobreA,
+            '${sobreA && !esArcilla ? '  pero PI < 4' : ''}'
+            ' → ${esArcilla ? 'C' : 'M'}',
+        cumple: esArcilla,
       ));
 
       // ── Alta o baja plasticidad ──────────────────────
@@ -404,7 +436,7 @@ List<PasoClasificacion> generarMemoria({
         numero: '5',
         titulo: ll < 50 ? 'Baja plasticidad (LL < 50)' : 'Alta plasticidad (LL ≥ 50)',
         detalle: 'LL = ${ll.toStringAsFixed(0)} ${ll < 50 ? '<' : '≥'} 50'
-            ' → ${sobreA ? (ll < 50 ? 'CL' : 'CH') : (ll < 50 ? 'ML' : 'MH')}',
+            ' → ${esArcilla ? (ll < 50 ? 'CL' : 'CH') : (ll < 50 ? 'ML' : 'MH')}',
       ));
     }
   }

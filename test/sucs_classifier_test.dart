@@ -13,6 +13,7 @@
 //  Grupo 9  — Helpers: esSueloFino()
 //  Grupo 10 — colorDeSuelo() consistencia con AppColors
 //  Grupo 11 — Casos reales de laboratorio
+//  Grupo 12 — Correcciones ASTM D2487 (PI < 4, GC-GM/SC-SM, memoria)
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sucs_classifier/services/sucs_classifier.dart';
@@ -305,10 +306,17 @@ void main() {
           equals(0.0));
     });
 
-    test('Límite grava/arena: pctGrava = 50% → GRAVA', () {
-      // gruesos=98, R4=49 → pctGrava = (49/98)*100 = 50.0% → GRAVA
+    test('Límite grava/arena: pctGrava = 50% exacto → ARENA', () {
+      // ASTM D2487: grava requiere MÁS del 50% de la fracción gruesa
+      // retenida en N°4. gruesos=98, R4=49 → 50.0% exacto → ARENA.
       final r = clasificarSuelo(sueloGrueso(
           pasa200: 2, retenidoN4: 49, ll: 20, lp: 15, cu: 6, cc: 2));
+      expect(r.symbol, startsWith('S'));
+    });
+
+    test('Límite grava/arena: pctGrava apenas > 50% → GRAVA', () {
+      final r = clasificarSuelo(sueloGrueso(
+          pasa200: 2, retenidoN4: 49.5, ll: 20, lp: 15, cu: 6, cc: 2));
       expect(r.symbol, startsWith('G'));
     });
 
@@ -611,5 +619,177 @@ void main() {
           pasa200: 25, retenidoN4: 10, ll: 38, lp: 20, cu: 5, cc: 1.8));
       expect(r.symbol, equals('SC'));
     });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // GRUPO 12: CORRECCIONES ASTM D2487
+  // ═══════════════════════════════════════════════════════════
+  group('clasificarFinos() — carta de plasticidad', () {
+    test('PI > 7 sobre Línea A → arcilla',
+        () => expect(clasificarFinos(35, 15), TipoFinos.arcilla));
+    test('4 ≤ PI ≤ 7 sobre Línea A → arcillaLimosa',
+        () => expect(clasificarFinos(25, 5), TipoFinos.arcillaLimosa));
+    test('PI = 7 exacto sobre Línea A → arcillaLimosa',
+        () => expect(clasificarFinos(25, 7), TipoFinos.arcillaLimosa));
+    test('PI = 4 exacto sobre Línea A → arcillaLimosa',
+        () => expect(clasificarFinos(24, 4), TipoFinos.arcillaLimosa));
+    test('PI < 4 aunque esté sobre Línea A → limo',
+        () => expect(clasificarFinos(24, 3), TipoFinos.limo));
+    test('PI bajo Línea A → limo',
+        () => expect(clasificarFinos(40, 10), TipoFinos.limo));
+    test('NP (PI = 0) → limo',
+        () => expect(clasificarFinos(20, 0), TipoFinos.limo));
+    test('LL ≥ 50 sobre Línea A → arcilla',
+        () => expect(clasificarFinos(60, 35), TipoFinos.arcilla));
+  });
+
+  group('Suelos finos con PI < 4 sobre Línea A → ML (antes daba CL)', () {
+    test('LL=24, LP=21 (PI=3, A=2.92) → ML', () {
+      expect(clasificarSuelo(sueloFino(pasa200: 70, ll: 24, lp: 21)).symbol,
+          equals('ML'));
+    });
+    test('LL=21, LP=19 (PI=2, A=0.73) → ML', () {
+      expect(clasificarSuelo(sueloFino(pasa200: 70, ll: 21, lp: 19)).symbol,
+          equals('ML'));
+    });
+    test('LL=18, LP=15 (PI=3, A=0) → ML', () {
+      expect(clasificarSuelo(sueloFino(pasa200: 70, ll: 18, lp: 15)).symbol,
+          equals('ML'));
+    });
+    test('LL=25, LP=17 (PI=8 > 7, sobre A) → CL', () {
+      expect(clasificarSuelo(sueloFino(pasa200: 70, ll: 25, lp: 17)).symbol,
+          equals('CL'));
+    });
+  });
+
+  group('Gruesos con > 12% de finos', () {
+    test('Grava, finos PI < 4 sobre Línea A → GM (antes GC)', () {
+      // LL=22, PI=2, A=1.46 → finos ML → GM
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 20, retenidoN4: 60, ll: 22, lp: 20, cu: 0, cc: 0))
+              .symbol,
+          equals('GM'));
+    });
+    test('Arena, finos PI < 4 sobre Línea A → SM (antes SC)', () {
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 20, retenidoN4: 10, ll: 22, lp: 20, cu: 0, cc: 0))
+              .symbol,
+          equals('SM'));
+    });
+    test('Grava, finos CL-ML (LL=25, PI=5) → GC-GM', () {
+      final r = clasificarSuelo(sueloGrueso(
+          pasa200: 20, retenidoN4: 60, ll: 25, lp: 20, cu: 0, cc: 0));
+      expect(r.symbol, equals('GC-GM'));
+      expect(r.description, equals('Grava limo-arcillosa'));
+    });
+    test('Arena, finos CL-ML (LL=25, PI=5) → SC-SM', () {
+      final r = clasificarSuelo(sueloGrueso(
+          pasa200: 20, retenidoN4: 10, ll: 25, lp: 20, cu: 0, cc: 0));
+      expect(r.symbol, equals('SC-SM'));
+      expect(r.description, equals('Arena limo-arcillosa'));
+    });
+    test('Grava, finos PI = 8 sobre A → GC', () {
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 20, retenidoN4: 60, ll: 25, lp: 17, cu: 0, cc: 0))
+              .symbol,
+          equals('GC'));
+    });
+    test('Cu/Cc no se exigen con > 12% de finos (no da ERROR con Cu=0)', () {
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 30, retenidoN4: 10, ll: 38, lp: 20, cu: 0, cc: 0))
+              .symbol,
+          equals('SC'));
+    });
+    test('Cu = 0 sigue dando ERROR con ≤ 12% de finos', () {
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 8, retenidoN4: 10, ll: 38, lp: 20, cu: 0, cc: 0))
+              .symbol,
+          equals('ERROR'));
+    });
+  });
+
+  group('Zona dual (5–12%) con finos de baja plasticidad', () {
+    test('Finos CL-ML → segundo símbolo GC (ASTM: CL, CH o CL-ML → GC)', () {
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 8, retenidoN4: 75, ll: 25, lp: 20, cu: 6, cc: 2))
+              .symbol,
+          equals('GW-GC'));
+    });
+    test('Finos PI < 4 sobre Línea A → segundo símbolo SM (antes SC)', () {
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 8, retenidoN4: 10, ll: 22, lp: 20, cu: 3, cc: 1))
+              .symbol,
+          equals('SP-SM'));
+    });
+  });
+
+  group('Validación de % retenido N°4', () {
+    test('R4 negativo → ERROR', () {
+      expect(
+          clasificarSuelo(sueloGrueso(
+                  pasa200: 3, retenidoN4: -5, ll: 20, lp: 15, cu: 6, cc: 2))
+              .symbol,
+          equals('ERROR'));
+    });
+  });
+
+  group('esGrava()', () {
+    test('R4 > arena → grava',
+        () => expect(esGrava(pasa200: 10, retenidoN4: 50), isTrue));
+    test('R4 = arena → arena (no grava)',
+        () => expect(esGrava(pasa200: 10, retenidoN4: 45), isFalse));
+    test('R4 < arena → arena',
+        () => expect(esGrava(pasa200: 10, retenidoN4: 30), isFalse));
+  });
+
+  group('generarMemoria() coincide con el clasificador', () {
+    List<PasoClasificacion> memoria(SucsInput i) => generarMemoria(
+          resultado: clasificarSuelo(i),
+          pasa200: i.pasa200,
+          retenidoN4: i.retenidoN4,
+          ll: i.ll,
+          lp: i.lp,
+          cu: i.cu,
+          cc: i.cc,
+        );
+
+    test('50% exacto: la memoria dice Arena, igual que el resultado', () {
+      final pasos = memoria(sueloGrueso(
+          pasa200: 2, retenidoN4: 49, ll: 20, lp: 15, cu: 6, cc: 2));
+      expect(pasos[1].titulo, contains('Arena'));
+      expect(pasos.last.titulo, contains('SW'));
+    });
+
+    test('Fino con PI < 4 sobre A: la memoria concluye M y ML', () {
+      final pasos = memoria(sueloFino(pasa200: 70, ll: 24, lp: 21));
+      final paso4 = pasos.firstWhere((p) => p.numero == '4');
+      expect(paso4.cumple, isFalse);
+      expect(paso4.detalle, endsWith('→ M'));
+      final paso5 = pasos.firstWhere((p) => p.numero == '5');
+      expect(paso5.detalle, endsWith('ML'));
+      expect(pasos.last.titulo, 'Resultado: ML');
+    });
+
+    test('GC-GM: la memoria explica finos CL-ML', () {
+      final pasos = memoria(sueloGrueso(
+          pasa200: 20, retenidoN4: 60, ll: 25, lp: 20, cu: 0, cc: 0));
+      final finos = pasos.firstWhere((p) => p.titulo == 'Tipo de finos');
+      expect(finos.detalle, contains('GC-GM'));
+      expect(pasos.last.titulo, 'Resultado: GC-GM');
+    });
+  });
+
+  group('colorDeSuelo() para los nuevos símbolos', () {
+    test('GC-GM → soilGravel',
+        () => expect(colorDeSuelo('GC-GM'), equals(AppColors.soilGravel)));
+    test('SC-SM → soilSand',
+        () => expect(colorDeSuelo('SC-SM'), equals(AppColors.soilSand)));
   });
 }

@@ -190,4 +190,42 @@ void main() {
       expect(r.symbol, 'A-7-6(13)');
     });
   });
+
+  group('Valores decimales entre umbrales (antes caían en A-7)', () {
+    test('LL=40.5, PI=8, F=50 → A-5 (no A-7-5)', () {
+      final r = clasificarAashto(AashtoInput(
+          pasa10: 95, pasa40: 90, pasa200: 50, ll: 40.5, lp: 32.5));
+      expect(r.grupo, 'A-5');
+    });
+    test('LL=30, PI=10.5, F=50 → A-6 (no A-7-6)', () {
+      final r = clasificarAashto(AashtoInput(
+          pasa10: 95, pasa40: 90, pasa200: 50, ll: 30, lp: 19.5));
+      expect(r.grupo, 'A-6');
+    });
+    test('LL=40.5, PI=10.5, F=50 → A-7 (ambos altos)', () {
+      final r = clasificarAashto(AashtoInput(
+          pasa10: 95, pasa40: 90, pasa200: 50, ll: 40.5, lp: 30));
+      expect(r.grupo, startsWith('A-7'));
+    });
+    test('LL=40.5, PI=8, F=30 → A-2-5 (no A-2-7)', () {
+      final r = clasificarAashto(AashtoInput(
+          pasa10: 80, pasa40: 60, pasa200: 30, ll: 40.5, lp: 32.5));
+      expect(r.grupo, 'A-2-5');
+    });
+    test('LL=30, PI=10.5, F=30 → A-2-6 (no A-2-7)', () {
+      final r = clasificarAashto(AashtoInput(
+          pasa10: 80, pasa40: 60, pasa200: 30, ll: 30, lp: 19.5));
+      expect(r.grupo, 'A-2-6');
+    });
+    test('LL=40 exacto, PI=10 exacto → A-4 (límites inclusivos)', () {
+      final r = clasificarAashto(AashtoInput(
+          pasa10: 95, pasa40: 90, pasa200: 50, ll: 40, lp: 30));
+      expect(r.grupo, 'A-4');
+    });
+    test('A-3 con P40 = 50.5 (antes no entraba por exigir ≥ 51)', () {
+      final r = clasificarAashto(AashtoInput(
+          pasa10: 90, pasa40: 50.5, pasa200: 5, ll: 0, lp: 0));
+      expect(r.grupo, 'A-3');
+    });
+  });
 }

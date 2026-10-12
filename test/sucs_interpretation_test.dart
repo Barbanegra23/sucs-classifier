@@ -160,7 +160,7 @@ void main() {
     test('símbolos duales de grava/arena tienen recomendaciones propias', () {
       for (final s in [
         'GW-GC', 'GW-GM', 'GP-GC', 'GP-GM',
-        'SW-SC', 'SW-SM', 'SP-SC', 'SP-SM',
+        'SW-SC', 'SW-SM', 'SP-SC', 'SP-SM', 'GC-GM', 'SC-SM',
       ]) {
         final rec = SucsInterpretation.generarRecomendaciones(s, 10, 30);
         expect(rec, isNotEmpty, reason: '$s debería tener recomendaciones propias');
@@ -222,6 +222,21 @@ void main() {
       final r = SucsInterpretation.interpretacionIngenieril('ZZ');
       expect(r, hasLength(1));
       expect(r.first, contains('consultar ensayos adicionales'));
+    });
+  });
+
+  group('GC-GM / SC-SM', () {
+    test('recomendaciones propias (no caen en default)', () {
+      for (final s in ['GC-GM', 'SC-SM']) {
+        final rec = SucsInterpretation.generarRecomendaciones(s, 5, 25);
+        expect(rec.any((r) => r.contains('CL-ML')), isTrue, reason: s);
+      }
+    });
+    test('interpretación propia (no la de GC / SC)', () {
+      for (final s in ['GC-GM', 'SC-SM']) {
+        final r = SucsInterpretation.interpretacionIngenieril(s);
+        expect(r.first, contains('limo-arcillosos'), reason: s);
+      }
     });
   });
 }
